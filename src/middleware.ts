@@ -63,8 +63,6 @@ export function middleware(req: NextRequest) {
   const wagmiCookie = req.cookies.get(WAGMI_COOKIE_KEY)?.value;
   const isConnected = isConnectedFromWagmiCookie(wagmiCookie);
 
-  console.log(isConnected);
-
   // 1) Gate protected routes
   if (!isConnected && isProtectedRoute(pathname)) {
     const url = new URL('/login', req.url);
