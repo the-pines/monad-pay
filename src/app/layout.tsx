@@ -3,8 +3,7 @@ import { headers } from 'next/headers';
 import type { Metadata } from 'next';
 import './globals.css';
 
-import { Header, NavigationFooter } from '@/components/layout';
-import ContextProvider from '@/contexts';
+import WalletContext from '@/contexts/WalletContext';
 
 const inter = Inter({
   variable: '--font-inter-sans',
@@ -25,15 +24,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} antialiased`}>
-        <ContextProvider cookies={cookies}>
-          <Header />
-
-          <main className="relative mx-auto max-w-[393px] w-full pt-[104px] pb-[calc(56px+env(safe-area-inset-bottom))]">
-            {children}
-          </main>
-
-          <NavigationFooter />
-        </ContextProvider>
+        <WalletContext cookies={cookies}>{children}</WalletContext>
       </body>
     </html>
   );

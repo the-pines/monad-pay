@@ -25,15 +25,12 @@ createAppKit({
 
 const queryClient = new QueryClient();
 
-interface ContextProviderProps {
+interface WalletContextProps {
   cookies: string | null;
   children: ReactNode;
 }
 
-const ContextProvider: React.FC<ContextProviderProps> = ({
-  cookies,
-  children,
-}) => {
+const WalletContext: React.FC<WalletContextProps> = ({ cookies, children }) => {
   const initialState = cookieToInitialState(wagmiConfig, cookies);
   return (
     <WagmiProvider config={wagmiConfig} initialState={initialState}>
@@ -42,4 +39,4 @@ const ContextProvider: React.FC<ContextProviderProps> = ({
   );
 };
 
-export default ContextProvider;
+export default WalletContext;
