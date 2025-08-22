@@ -1,4 +1,10 @@
-import type { DbCard, DbUser, UiCardPublic, UiTransaction } from "./types";
+import type {
+  DbCard,
+  DbUser,
+  UiCardPublic,
+  UiTransaction,
+  UiVault,
+} from "./types";
 import { dataSource } from "./datasource";
 import {
   mapPaymentToUiTransaction,
@@ -39,4 +45,8 @@ export async function fetchUserTransactions(): Promise<UiTransaction[]> {
 
 export async function fetchVirtualCardDisplay(): Promise<UiCardPublic> {
   return delay(await dataSource.getVirtualCardPublic());
+}
+
+export async function fetchVaults(): Promise<UiVault[]> {
+  return delay(await dataSource.getVaults());
 }

@@ -7,6 +7,7 @@ import type {
   DbTransfer,
   DbUser,
   UiCardPublic,
+  UiVault,
 } from "./types";
 import {
   cardsFake,
@@ -14,6 +15,7 @@ import {
   transfersFake,
   usersFake,
   virtualCardDisplay,
+  vaultsFake,
 } from "./fakeData";
 
 export interface DataSource {
@@ -23,6 +25,7 @@ export interface DataSource {
   getUserPayments(): Promise<DbPayment[]>;
   getUserTransfers(): Promise<DbTransfer[]>;
   getVirtualCardPublic(): Promise<UiCardPublic>;
+  getVaults(): Promise<UiVault[]>;
 }
 
 class FakeDataSource implements DataSource {
@@ -65,6 +68,10 @@ class FakeDataSource implements DataSource {
       expiry: virtualCardDisplay.expiry,
       cvv: virtualCardDisplay.cvv,
     };
+  }
+
+  async getVaults(): Promise<UiVault[]> {
+    return vaultsFake;
   }
 }
 

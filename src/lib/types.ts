@@ -77,3 +77,13 @@ export type UiCardPublic = {
   expiry: string; // MM/YYYY
   cvv: string; // display only in this fake layer
 };
+
+export type UiVault = {
+  id: string;
+  name: string; // e.g., Vacation, New Car
+  balanceUsd: number; // current balance
+  goalUsd: number; // target goal for the vault
+  changeUsd: number; // period change used for +$100 labels
+  changePct: number; // e.g., 0.02 => 2%
+  history: Array<{ timestamp: string; valueUsd: number }>; // ordered oldest->newest
+};
