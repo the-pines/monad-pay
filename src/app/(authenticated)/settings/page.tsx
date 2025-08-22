@@ -1,5 +1,4 @@
-import LogoutButton from "@/components/feature/Settings/LogoutButton";
-export const metadata = { title: "Settings" };
+import LogoutButton from '@/components/feature/Settings/LogoutButton';
 
 export default function SettingsPage() {
   return (
