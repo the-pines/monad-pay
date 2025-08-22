@@ -8,6 +8,20 @@
       "when": 1755839666334,
       "tag": "0000_chunky_zarda",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1755901680103,
+      "tag": "0001_lonely_malcolm_colcord",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1755902742291,
+      "tag": "0002_heavy_mauler",
+      "breakpoints": true
     }
   ]
 }

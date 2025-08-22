@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   text,
   uuid,
@@ -17,13 +18,15 @@ export const paymentStatusE    = pgEnum('payment_status_e', ['started', 'complet
 // prettier-ignore
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
   address: text('address').notNull(),
   balance: numeric('balance', { precision: 20, scale: 2 }).notNull().default('0.00'), // total balance in usd
   provider: providerE('provider').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [
-    uniqueIndex("u_user_address").on(t.address)
+    uniqueIndex("u_user_address").on(t.address),
+    index('i_user_name').on(t.name)
 ]);
 
 // prettier-ignore
@@ -46,9 +49,9 @@ export const transfers = pgTable('transfers', {
 // prettier-ignore
 export const cards = pgTable('cards', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  stripeId: text('stripe_id').notNull(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'set null' }),
   stripeCardId: text('stripe_card_id').notNull(),
+  stripeCardHolderId: text('stripe_cardholder_id').notNull(),
   status: cardStatusE('status').notNull(),
   spendingLimit: numeric('spending_limit', { precision: 20, scale: 2 }).notNull().default('0.00'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -60,7 +63,7 @@ export const cards = pgTable('cards', {
 // prettier-ignore
 export const payments = pgTable('payments', {
   id: uuid('id').primaryKey().defaultRandom(),
-  cardId: uuid('card_id').notNull().references(() => cards.id, { onDelete: 'cascade' }),
+  cardId: uuid('card_id').notNull().references(() => cards.id, { onDelete: 'set null' }),
   orderId: text('order_id').notNull(),
   entity: text('entity').notNull(), // commerce name
   currency: text('currency').notNull(), // USD, ARS, MEX, EUR, etc
@@ -75,7 +78,7 @@ export const payments = pgTable('payments', {
 // prettier-ignore
 export const executions = pgTable('executions', {
   id: uuid('id').primaryKey().defaultRandom(),
-  paymentId: uuid('payment_id').notNull().references(() => payments.id, { onDelete: 'cascade' }),
+  paymentId: uuid('payment_id').notNull().references(() => payments.id, { onDelete: 'set null' }),
   symbol: text('symbol').notNull(),
   amount: numeric('amount', { precision: 78, scale: 0 }).notNull(),
   decimals: integer('decimals').notNull(),
@@ -85,4 +88,16 @@ export const executions = pgTable('executions', {
 }, (t) => [
     uniqueIndex("u_execution_payment").on(t.paymentId),
     uniqueIndex("u_execution_tx").on(t.txHash)
+]);
+
+// prettier-ignore
+export const vaults = pgTable('vaults', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'set null' }),
+  collaborators: text('collaborators').array().notNull().default(sql`ARRAY[]::text[]`),
+  address: text('address').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (t) => [
+  index("i_vault_user").on(t.userId)
 ]);
