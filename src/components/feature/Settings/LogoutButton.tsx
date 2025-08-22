@@ -5,12 +5,11 @@ import { useAuth } from "@/hooks";
 
 export default function LogoutButton() {
   const { logout, address } = useAuth();
-  const short = address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "";
 
   return (
     <div className="flex flex-col gap-2">
       {address ? (
-        <div className="text-sm text-white/60">Signed in as {short}</div>
+        <div className="text-sm text-white/60">Logged in as {address}</div>
       ) : null}
       <button
         onClick={logout}

@@ -8,8 +8,15 @@ import {
   fetchUserCard,
   fetchUserTransactions,
   fetchVirtualCardDisplay,
+  fetchVaults,
 } from "@/lib/api";
-import type { DbCard, DbUser, UiCardPublic, UiTransaction } from "@/lib/types";
+import type {
+  DbCard,
+  DbUser,
+  UiCardPublic,
+  UiTransaction,
+  UiVault,
+} from "@/lib/types";
 
 type AsyncState<T> = {
   data: T | null;
@@ -65,4 +72,8 @@ export function useUserTransactions() {
 
 export function useVirtualCardDisplay() {
   return useAsync<UiCardPublic>(fetchVirtualCardDisplay, []);
+}
+
+export function useVaults() {
+  return useAsync<UiVault[]>(fetchVaults, []);
 }

@@ -5,6 +5,7 @@ import type {
   DbTimestamp,
   DbUser,
   DbTransfer,
+  UiVault,
 } from "./types";
 
 const now = new Date();
@@ -235,5 +236,114 @@ export const transfersFake: DbTransfer[] = [
     txHash: "0xtxhash2",
     createdAt: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 2)),
     updatedAt: iso(now),
+  },
+];
+
+// Vaults fake data for UI (no DB schema change)
+export const vaultsFake: UiVault[] = [
+  {
+    id: "v1",
+    name: "Vacation",
+    balanceUsd: 1000,
+    goalUsd: 2000,
+    changeUsd: 100,
+    changePct: 0.02,
+    history: [
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 6)),
+        valueUsd: 850,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 5)),
+        valueUsd: 900,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 4)),
+        valueUsd: 920,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 3)),
+        valueUsd: 960,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 2)),
+        valueUsd: 980,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 1)),
+        valueUsd: 995,
+      },
+      { timestamp: iso(now), valueUsd: 1000 },
+    ],
+  },
+  {
+    id: "v2",
+    name: "New Car",
+    balanceUsd: 500,
+    goalUsd: 10000,
+    changeUsd: 50,
+    changePct: 0.02,
+    history: [
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 6)),
+        valueUsd: 400,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 5)),
+        valueUsd: 420,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 4)),
+        valueUsd: 430,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 3)),
+        valueUsd: 450,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 2)),
+        valueUsd: 470,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 1)),
+        valueUsd: 490,
+      },
+      { timestamp: iso(now), valueUsd: 500 },
+    ],
+  },
+  {
+    id: "v3",
+    name: "Emergency Fund",
+    balanceUsd: 2000,
+    goalUsd: 5000,
+    changeUsd: 200,
+    changePct: 0.025,
+    history: [
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 6)),
+        valueUsd: 1700,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 5)),
+        valueUsd: 1750,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 4)),
+        valueUsd: 1800,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 3)),
+        valueUsd: 1850,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 2)),
+        valueUsd: 1900,
+      },
+      {
+        timestamp: iso(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 1)),
+        valueUsd: 1950,
+      },
+      { timestamp: iso(now), valueUsd: 2000 },
+    ],
   },
 ];
