@@ -9,15 +9,23 @@ import {
   ArrowLeftIcon,
   DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
+import { ERC20_ABI } from "@/config/contracts";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { parseUnits } from "viem";
 
-function formatUsd(amount: number): string {
-  return `$${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+function formatToken(amount: number, symbol?: string): string {
+  const s = symbol || "";
+  return `${amount.toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  })} ${s}`.trim();
 }
 
 export default function VaultDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { data: vaults, loading } = useVaults();
+  const { isConnected, address } = useAccount();
+  const { writeContractAsync } = useWriteContract();
   const { data: balanceUsd } = useUserBalanceUSD();
   const [isAddFundsOpen, setIsAddFundsOpen] = React.useState(false);
   const [addAmount, setAddAmount] = React.useState<string>("");
@@ -29,16 +37,31 @@ export default function VaultDetailPage() {
     return vaults.find((v) => v.id === params.id) ?? null;
   }, [vaults, params.id]);
 
-  const shareUrl = React.useMemo(() => {
+  const userTokenBalRaw = useReadContract({
+    address: (vault?.assetAddress ??
+      "0x0000000000000000000000000000000000000000") as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [address as `0x${string}`],
+    query: { enabled: Boolean(vault && isConnected && address) },
+  });
+
+  const userTokenBalance = React.useMemo(() => {
+    const raw = (userTokenBalRaw.data as bigint | undefined) ?? BigInt(0);
+    const d = vault?.decimals ?? 18;
+    return Number(raw) / 10 ** d;
+  }, [userTokenBalRaw.data, vault?.decimals]);
+
+  const copyValue = React.useMemo(() => {
     if (!vault) return "";
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    return `${origin}/vaults/${vault.id}`;
+    // Copy the contract address instead of a shareable link
+    return String(vault.id);
   }, [vault]);
 
   async function handleCopy() {
-    if (!shareUrl) return;
+    if (!copyValue) return;
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(copyValue);
     } catch {
       // no-op for environments without clipboard permissions
     }
@@ -47,27 +70,35 @@ export default function VaultDetailPage() {
   async function handleConfirmAddFunds() {
     if (!vault) return;
     const amount = Number(addAmount);
-    const available = Number(balanceUsd ?? 0);
     if (!Number.isFinite(amount) || amount <= 0) {
       setAddError("Enter a valid amount");
       return;
     }
-    if (amount > available) {
-      setAddError("Amount exceeds available balance");
+    if (!isConnected) {
+      setAddError("Connect your wallet first");
+      return;
+    }
+    if (amount > userTokenBalance) {
+      setAddError(`Insufficient ${vault.symbol} balance`);
       return;
     }
     setAddError(null);
     setIsSubmitting(true);
     try {
-      await fetch(`/api/vaults/${vault.id}/fund`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amountUsd: amount, source: "balance" }),
+      const units = parseUnits(String(amount), vault.decimals);
+      // Single transaction: transfer token directly to the vault address
+      await writeContractAsync({
+        address: vault.assetAddress,
+        abi: ERC20_ABI,
+        functionName: "transfer",
+        args: [vault.id as `0x${string}`, units],
       });
       setIsAddFundsOpen(false);
       setAddAmount("");
-    } catch {
-      setAddError("Something went wrong. Please try again.");
+    } catch (err) {
+      const msg =
+        (err as Error)?.message || "Something went wrong. Please try again.";
+      setAddError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -130,7 +161,7 @@ export default function VaultDetailPage() {
                 className="text-[17px] font-bold leading-[22px]"
                 style={{ color: "#8A76F9" }}
               >
-                {formatUsd(vault.balanceUsd)}
+                {formatToken(vault.balanceUsd, vault.symbol)}
               </div>
             </div>
             <div className="w-[175px] h-[80px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-start justify-center p-3">
@@ -139,7 +170,7 @@ export default function VaultDetailPage() {
                 className="text-[17px] font-bold leading-[22px]"
                 style={{ color: "#8A76F9" }}
               >
-                {formatUsd(vault.goalUsd)}
+                {formatToken(vault.goalUsd, vault.symbol)}
               </div>
             </div>
           </div>
@@ -162,12 +193,12 @@ export default function VaultDetailPage() {
               className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[rgba(251,250,249,0.06)] hover:bg-[rgba(251,250,249,0.1)] text-[#FBFAF9] text-sm"
             >
               <DocumentDuplicateIcon className="w-4 h-4" aria-hidden="true" />
-              Copy shareable link
+              Copy contract address
             </button>
           </div>
           <div className="mt-2 text-[13px] text-white/60">
-            You can share this vault for others to contribute to. Only you can
-            withdraw when you hit the goal. Cool thing about smart contracts :)
+            Share your vault address so others can contribute. Only you can
+            withdraw when you hit the goal.
           </div>
         </div>
       </div>
@@ -179,14 +210,19 @@ export default function VaultDetailPage() {
               Add funds to {vault.name}
             </div>
             <div className="mt-2 text-sm text-white/70">
-              Available balance: {formatUsd(Number(balanceUsd ?? 0))}
+              Available balance:{" "}
+              {Number(balanceUsd ?? 0).toLocaleString(undefined, {
+                maximumFractionDigits: 0,
+              })}
             </div>
             <div className="mt-3">
-              <label className="block text-sm mb-1">Amount (USD)</label>
+              <label className="block text-sm mb-1">
+                Amount ({vault.symbol})
+              </label>
               <input
                 type="number"
                 min={0}
-                step={1}
+                step={"any"}
                 inputMode="decimal"
                 value={addAmount}
                 onChange={(e) => setAddAmount(e.target.value)}

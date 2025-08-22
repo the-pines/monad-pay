@@ -81,6 +81,10 @@ export type UiCardPublic = {
 export type UiVault = {
   id: string;
   name: string; // e.g., Vacation, New Car
+  symbol: string; // ERC20 symbol, e.g., MON or USDC
+  assetAddress: `0x${string}`; // ERC20 token address
+  decimals: number; // token decimals
+  isNative?: boolean; // true if native MON vault
   balanceUsd: number; // current balance
   goalUsd: number; // target goal for the vault
   changeUsd: number; // period change used for +$100 labels

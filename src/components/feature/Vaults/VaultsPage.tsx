@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useVaults } from "@/hooks";
 import type { UiVault } from "@/lib/types";
 import VaultCard from "@/components/ui/Vault";
@@ -27,9 +28,6 @@ const Vaults: React.FC<{
   vaults: UiVault[];
   onSelect: (v: UiVault) => void;
 }> = ({ vaults, onSelect }) => {
-  const firstRow = vaults.slice(0, 2);
-  const secondRow = vaults.slice(2, 3);
-
   return (
     <div className="w-full bg-[#200052] pb-4">
       <div className="flex items-center px-4 pt-6">
@@ -38,28 +36,22 @@ const Vaults: React.FC<{
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 px-4 pt-1">
-        <div className="flex flex-row gap-3">
-          {firstRow.map((v) => (
-            <VaultCard key={v.id} vault={v} onSelect={onSelect} />
-          ))}
-        </div>
+      <div className="flex flex-row flex-wrap gap-3 px-4 pt-1">
+        {vaults.map((v) => (
+          <VaultCard key={v.id} vault={v} onSelect={onSelect} />
+        ))}
 
-        <div className="flex flex-row gap-3">
-          {secondRow.map((v) => (
-            <VaultCard key={v.id} vault={v} onSelect={onSelect} />
-          ))}
-
-          <div className="relative w-[175px] h-[167px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-center justify-center gap-2 text-center">
-            <PlusCircleIcon
-              className="w-8 h-8 text-[#836EF9]"
-              aria-hidden="true"
-            />
-            <span className="font-bold text-[17px] text-[#FBFAF9]">
-              Add new
-            </span>
-          </div>
-        </div>
+        <Link
+          href="/vaults/new"
+          className="relative w-[175px] h-[167px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-center justify-center gap-2 text-center hover:bg-[rgba(251,250,249,0.1)] cursor-pointer"
+          aria-label="Create new vault"
+        >
+          <PlusCircleIcon
+            className="w-8 h-8 text-[#836EF9]"
+            aria-hidden="true"
+          />
+          <span className="font-bold text-[17px] text-[#FBFAF9]">Add new</span>
+        </Link>
       </div>
     </div>
   );
@@ -91,6 +83,10 @@ const VaultsPage: React.FC = () => {
     return {
       id: "all",
       name: "Vaults",
+      symbol: "",
+      assetAddress:
+        "0x0000000000000000000000000000000000000000" as `0x${string}`,
+      decimals: 18,
       balanceUsd: last,
       goalUsd: totalGoalUsd,
       changeUsd,

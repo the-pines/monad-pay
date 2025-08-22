@@ -8,8 +8,11 @@ type VaultCardProps = {
   onSelect?: (vault: UiVault) => void;
 };
 
-function formatUsd(amount: number): string {
-  return `$${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+function formatToken(amount: number, symbol?: string): string {
+  const s = symbol || "";
+  return `${amount.toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  })} ${s}`.trim();
 }
 
 function buildSparkPath(
@@ -66,7 +69,7 @@ const VaultCard: React.FC<VaultCardProps> = ({ vault, onSelect }) => {
         </div>
         <div className="flex flex-row items-center w-full">
           <span className="text-[15px] text-white/50 ">
-            {`Goal: ${formatUsd(vault.goalUsd)}`}
+            {`Goal: ${formatToken(vault.goalUsd, vault.symbol)}`}
           </span>
         </div>
       </div>
@@ -75,7 +78,7 @@ const VaultCard: React.FC<VaultCardProps> = ({ vault, onSelect }) => {
         className="text-[13px] font-bold leading-[17px] ml-auto"
         style={{ color: "#8A76F9" }}
       >
-        {formatUsd(vault.balanceUsd)}
+        {formatToken(vault.balanceUsd, vault.symbol)}
       </div>
     </button>
   );
