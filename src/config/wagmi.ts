@@ -1,11 +1,16 @@
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { AppKitNetwork, monadTestnet } from '@reown/appkit/networks';
-import { config } from './env';
+import { cookieStorage, createStorage } from 'wagmi';
 
-export const networks: AppKitNetwork[] = [monadTestnet];
+const networks: AppKitNetwork[] = [monadTestnet];
 
 export const wagmiAdapter = new WagmiAdapter({
+  storage: createStorage({
+    storage: cookieStorage,
+  }),
   ssr: true,
-  projectId: config.projectId,
+  projectId: process.env.NEXT_PUBLIC_PROJECT_ID!,
   networks,
 });
+
+export const wagmiConfig = wagmiAdapter.wagmiConfig;

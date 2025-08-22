@@ -1,42 +1,39 @@
-import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { AuthRoot } from "@/components/layout";
+import { Inter } from 'next/font/google';
+import { headers } from 'next/headers';
+import type { Metadata } from 'next';
+import './globals.css';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+import { Header, NavigationFooter } from '@/components/layout';
+import ContextProvider from '@/contexts';
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const inter = Inter({
+  variable: '--font-inter-sans',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  title: "Monay Pay",
-  description: "enirehtac em yrram",
+  title: 'Monay Pay',
+  description: 'enirehtac em yrram',
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  viewportFit: "cover",
-};
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
+  const headersObj = await headers();
+  const cookies = headersObj.get('cookie');
+
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <AuthRoot>{children}</AuthRoot>
+      <body className={`${inter.variable} antialiased`}>
+        <ContextProvider cookies={cookies}>
+          <Header />
+
+          <main className="relative mx-auto max-w-[393px] w-full pt-[104px] pb-[calc(56px+env(safe-area-inset-bottom))]">
+            {children}
+          </main>
+
+          <NavigationFooter />
+        </ContextProvider>
       </body>
     </html>
   );
