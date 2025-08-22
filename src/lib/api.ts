@@ -57,5 +57,4 @@ export async function fetchVaults(): Promise<UiVault[]> {
   } catch {
     // fallback
   }
-  return delay(await dataSource.getVaults());
 }

@@ -188,6 +188,12 @@ export function useVaults() {
     const assetsStart = isNativeStart + vaultAddresses.length;
     const balancesStart = assetsStart + vaultAddresses.length;
 
+    // Produce consistent timestamps across all vaults for aggregation
+    const now = new Date();
+    const prev = new Date(now.getTime() - 60 * 1000); // 1 minute earlier
+    const nowIso = now.toISOString();
+    const prevIso = prev.toISOString();
+
     return vaultAddresses.map((va, i) => {
       const goalRaw =
         (meta[goalsStart + i]?.result as bigint | undefined) ?? BigInt(0);
@@ -213,7 +219,6 @@ export function useVaults() {
       const balance = toUnits(balRaw, decimals);
       const goal = toUnits(goalRaw, decimals);
 
-      const nowIso = new Date().toISOString();
       return {
         id: va,
         name,
@@ -228,7 +233,7 @@ export function useVaults() {
         changeUsd: 0,
         changePct: 0,
         history: [
-          { timestamp: nowIso, valueUsd: Math.max(0, balance - 0.01) },
+          { timestamp: prevIso, valueUsd: Math.max(0, balance - 0.01) },
           { timestamp: nowIso, valueUsd: balance },
         ],
       } as UiVault;

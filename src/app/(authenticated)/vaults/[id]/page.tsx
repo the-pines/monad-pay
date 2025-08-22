@@ -10,8 +10,14 @@ import {
   DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
 import { ERC20_ABI } from "@/config/contracts";
-import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import {
+  useAccount,
+  useBalance,
+  useReadContract,
+  useWriteContract,
+} from "wagmi";
 import { parseUnits } from "viem";
+import { VAULT_ABI } from "@/config/contracts";
 
 function formatToken(amount: number, symbol?: string): string {
   const s = symbol || "";
@@ -37,20 +43,37 @@ export default function VaultDetailPage() {
     return vaults.find((v) => v.id === params.id) ?? null;
   }, [vaults, params.id]);
 
-  const userTokenBalRaw = useReadContract({
+  // Read user's balance depending on vault type
+  const erc20BalRead = useReadContract({
     address: (vault?.assetAddress ??
       "0x0000000000000000000000000000000000000000") as `0x${string}`,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: [address as `0x${string}`],
-    query: { enabled: Boolean(vault && isConnected && address) },
+    query: {
+      enabled: Boolean(
+        vault && !vault.isNative && isConnected && address && vault.assetAddress
+      ),
+    },
+  });
+
+  const nativeBalRead = useBalance({
+    address,
+    query: {
+      enabled: Boolean(vault && vault.isNative && isConnected && address),
+    },
   });
 
   const userTokenBalance = React.useMemo(() => {
-    const raw = (userTokenBalRaw.data as bigint | undefined) ?? BigInt(0);
-    const d = vault?.decimals ?? 18;
+    if (!vault) return 0;
+    if (vault.isNative) {
+      const raw = nativeBalRead.data?.value ?? BigInt(0);
+      return Number(raw) / 10 ** 18;
+    }
+    const raw = (erc20BalRead.data as bigint | undefined) ?? BigInt(0);
+    const d = vault.decimals ?? 18;
     return Number(raw) / 10 ** d;
-  }, [userTokenBalRaw.data, vault?.decimals]);
+  }, [vault, nativeBalRead.data, erc20BalRead.data]);
 
   const copyValue = React.useMemo(() => {
     if (!vault) return "";
@@ -86,13 +109,24 @@ export default function VaultDetailPage() {
     setIsSubmitting(true);
     try {
       const units = parseUnits(String(amount), vault.decimals);
-      // Single transaction: transfer token directly to the vault address
-      await writeContractAsync({
-        address: vault.assetAddress,
-        abi: ERC20_ABI,
-        functionName: "transfer",
-        args: [vault.id as `0x${string}`, units],
-      });
+      if (vault.isNative) {
+        // Send native MON to the vault via contributeNative
+        await writeContractAsync({
+          address: vault.id as `0x${string}`,
+          abi: VAULT_ABI,
+          functionName: "contributeNative",
+          args: [],
+          value: units,
+        });
+      } else {
+        // Transfer ERC20 tokens directly to the vault address
+        await writeContractAsync({
+          address: vault.assetAddress,
+          abi: ERC20_ABI,
+          functionName: "transfer",
+          args: [vault.id as `0x${string}`, units],
+        });
+      }
       setIsAddFundsOpen(false);
       setAddAmount("");
     } catch (err) {

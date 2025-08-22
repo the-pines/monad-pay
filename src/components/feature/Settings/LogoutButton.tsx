@@ -1,10 +1,15 @@
 "use client";
 
+import { useAppKitAccount, useDisconnect } from "@reown/appkit/react";
 import React from "react";
-import { useAuth } from "@/hooks";
 
 export default function LogoutButton() {
-  const { logout, address } = useAuth();
+  const { disconnect } = useDisconnect();
+  const { address } = useAppKitAccount();
+
+  const logout = async () => {
+    await disconnect();
+  };
 
   return (
     <div className="flex flex-col gap-2">

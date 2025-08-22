@@ -17,7 +17,9 @@ import {
   VAULT_FACTORY_ADDRESS,
 } from "@/config/contracts";
 
-// Minimal known ERC20 list to probe balances for; expand as needed
+// Dynamically populate ERC-20s from the connected wallet by reading token lists would
+// require an indexer. For now, we will hide static options and only surface tokens with
+// positive balances by probing a small, known set. You can expand this list as needed.
 const ERC20_CANDIDATES = [
   {
     symbol: "WMON",
@@ -79,7 +81,7 @@ export default function CreateVaultClient() {
     if (nativeAmount > 0) {
       options.push({
         key: "native",
-        label: "MON (native)",
+        label: "MON",
         value: "native",
         decimals: 18,
         isNative: true,
@@ -99,11 +101,11 @@ export default function CreateVaultClient() {
         });
       }
     });
+    // If user holds neither native nor any probed ERC-20, still allow native
     if (options.length === 0) {
-      // fallback: at least allow creating a native vault
       options.push({
         key: "native",
-        label: "MON (native)",
+        label: "MON",
         value: "native",
         decimals: 18,
         isNative: true,
@@ -220,39 +222,7 @@ export default function CreateVaultClient() {
             value={isNative ? "native" : assetAddress}
             onChange={(e) => {
               const val = e.target.value;
-              // tokenOptions built from wallet balances
-              const options: Array<{
-                key: string;
-                label: string;
-                value: string;
-                decimals: number;
-                isNative: boolean;
-              }> = [];
-              const nativeAmount = Number(nativeBal?.value ?? BigInt(0)) / 1e18;
-              if (nativeAmount >= 0) {
-                options.push({
-                  key: "native",
-                  label: "MON (native)",
-                  value: "native",
-                  decimals: 18,
-                  isNative: true,
-                });
-              }
-              const balances = erc20BalanceReads.data ?? [];
-              ERC20_CANDIDATES.forEach((t, idx) => {
-                const balRaw =
-                  (balances[idx]?.result as bigint | undefined) ?? BigInt(0);
-                const bal = Number(balRaw) / 10 ** t.decimals;
-                if (bal >= 0) {
-                  options.push({
-                    key: t.address,
-                    label: `${t.name} (${t.symbol})`,
-                    value: t.address,
-                    decimals: t.decimals,
-                    isNative: false,
-                  });
-                }
-              });
+              const options = tokenOptions;
               const opt = options.find((o) =>
                 o.isNative ? val === "native" : o.value === val
               );
@@ -268,16 +238,13 @@ export default function CreateVaultClient() {
             }}
             className="w-[362px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9]"
           >
-            <option value="native" className="bg-[#200052] text-[#FBFAF9]">
-              MON (native)
-            </option>
-            {ERC20_CANDIDATES.map((t) => (
+            {tokenOptions.map((t) => (
               <option
-                key={t.symbol}
-                value={t.address}
+                key={t.key}
+                value={t.isNative ? "native" : t.value}
                 className="bg-[#200052] text-[#FBFAF9]"
               >
-                {t.name} ({t.symbol})
+                {t.label}
               </option>
             ))}
           </select>
