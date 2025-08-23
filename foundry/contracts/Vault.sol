@@ -1,24 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { ERC2771Context } from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+
+interface IERC20Permit {
+    function permit(
+        address owner, address spender, uint256 value,
+        uint256 deadline, uint8 v, bytes32 r, bytes32 s
+    ) external;
+}
 
 /**
  * @title Vault
- * @notice Vault holds either ONE ERC20 or native MON, chosen at deploy.
- *         Anyone can contribute the chosen asset. Only creator can withdraw,
- *         and only after balance >= goal. One-shot withdraw closes the vault.
+ * @notice Holds either ONE ERC20 or native MON. Meta-tx aware via ERC2771.
  */
-contract Vault is ReentrancyGuard {
+contract Vault is ReentrancyGuard, ERC2771Context {
     using SafeERC20 for IERC20;
 
-    // Immutable config
     address public immutable creator;
-    IERC20  public immutable asset;      // zero when isNative == true
-    bool    public immutable isNative;   // true => native MON vault
-    uint256 public immutable goal;       // token units or wei (if native)
+    IERC20  public immutable asset;      
+    bool    public immutable isNative;   
+    uint256 public immutable goal;      
     string  public name;
 
     // State
@@ -35,18 +40,16 @@ contract Vault is ReentrancyGuard {
     error AlreadyWithdrawn();
     error InvalidParam();
     error ZeroAmount();
-    error WrongAsset(); // sending wrong asset type
+    error WrongAsset();
 
     constructor(
         address _creator,
-        IERC20 _asset,           // set to IERC20(address(0)) if native
+        IERC20 _asset,           
         bool _isNative,
         uint256 _goal,
-        string memory _name
-    ) payable {
-        // Invariants:
-        // - if native: asset must be zero
-        // - if ERC20 : asset must be non-zero
+        string memory _name,
+        address trustedForwarder
+    ) ERC2771Context(trustedForwarder) {
         if (_creator == address(0) || _goal == 0) revert InvalidParam();
         if (_isNative) {
             if (address(_asset) != address(0)) revert InvalidParam();
@@ -69,40 +72,55 @@ contract Vault is ReentrancyGuard {
         return !isWithdrawn && assetBalance() >= goal;
     }
 
-    // ---- Contributions ----
 
-    /// @notice Contribute ERC20 (only for ERC20 vaults). Caller must have approved this contract.
+    /// @notice Contribute ERC20 (only for ERC20 vaults). Caller must have approved OR use permit helper.
     function contribute(uint256 amount) external nonReentrant {
         if (isNative) revert WrongAsset();
         if (amount == 0) revert ZeroAmount();
-        asset.safeTransferFrom(msg.sender, address(this), amount);
+        asset.safeTransferFrom(_msgSender(), address(this), amount);
         uint256 bal = asset.balanceOf(address(this));
-        emit Deposited(msg.sender, amount, bal, false);
+        emit Deposited(_msgSender(), amount, bal, false);
         if (!isWithdrawn && bal >= goal) emit GoalReached(block.timestamp, bal);
     }
 
-    /// @notice Contribute native MON (only for native vaults).
-    receive() external payable {
-        if (!isNative) revert WrongAsset();
-        if (msg.value == 0) revert ZeroAmount();
-        uint256 bal = address(this).balance;
-        emit Deposited(msg.sender, msg.value, bal, true);
+    /// @notice Contribute ERC20 using EIP-2612 permit in the same (meta-)tx.
+    function contributeWithPermit(
+        uint256 amount,
+        uint256 deadline,
+        uint8 v, bytes32 r, bytes32 s
+    ) external nonReentrant {
+        if (isNative) revert WrongAsset();
+        if (amount == 0) revert ZeroAmount();
+        IERC20Permit(address(asset)).permit(_msgSender(), address(this), amount, deadline, v, r, s);
+        asset.safeTransferFrom(_msgSender(), address(this), amount);
+        uint256 bal = asset.balanceOf(address(this));
+        emit Deposited(_msgSender(), amount, bal, false);
         if (!isWithdrawn && bal >= goal) emit GoalReached(block.timestamp, bal);
     }
 
-    /// @notice Explicit payable function (same as receive) for UIs.
+    /// @notice Contribute native MON via explicit function (use this for meta-tx).
     function contributeNative() external payable nonReentrant {
         if (!isNative) revert WrongAsset();
         if (msg.value == 0) revert ZeroAmount();
         uint256 bal = address(this).balance;
-        emit Deposited(msg.sender, msg.value, bal, true);
+        emit Deposited(_msgSender(), msg.value, bal, true);
         if (!isWithdrawn && bal >= goal) emit GoalReached(block.timestamp, bal);
     }
 
-    // ---- Withdraw ----
+    /// @notice Bare receives are allowed for normal EOAs only (not via forwarder).
+    receive() external payable {
+        if (!isNative) revert WrongAsset();
+        // If this comes via a forwarder, calldata will be non-empty → it would hit fallback (not defined) and revert.
+        // Normal EOAs (no calldata) hit receive() and are accepted:
+        if (msg.value == 0) revert ZeroAmount();
+        uint256 bal = address(this).balance;
+        emit Deposited(msg.sender, msg.value, bal, true); // raw sender for direct sends
+        if (!isWithdrawn && bal >= goal) emit GoalReached(block.timestamp, bal);
+    }
+
 
     function withdraw() external nonReentrant {
-        if (msg.sender != creator) revert NotCreator();
+        if (_msgSender() != creator) revert NotCreator();
         if (isWithdrawn) revert AlreadyWithdrawn();
 
         uint256 bal = assetBalance();
@@ -118,5 +136,12 @@ contract Vault is ReentrancyGuard {
             asset.safeTransfer(creator, bal);
             emit Withdrawn(creator, bal, false);
         }
+    }
+
+    function _msgSender() internal view override returns (address s) {
+        return ERC2771Context._msgSender();
+    }
+    function _msgData() internal view override returns (bytes calldata d) {
+        return ERC2771Context._msgData();
     }
 }

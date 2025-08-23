@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppKitAccount, useDisconnect } from "@reown/appkit/react";
 import { generateRandomCardholder } from "@/lib/create-fake-form-data";
-import { DELEGATOR_ADDRESS } from "@/config/contracts";
+import { SERVER_WALLET_ADDRESS } from "@/config/contracts";
 import { ERC20_TOKENS } from "@/config/tokens";
 import { isAddress, type Address } from "viem";
 import { erc20Abi } from "viem";
@@ -162,7 +162,7 @@ export default function SignUpPage() {
       setError("USDC not configured");
       return;
     }
-    if (!DELEGATOR_ADDRESS || !isAddress(DELEGATOR_ADDRESS)) {
+    if (!SERVER_WALLET_ADDRESS || !isAddress(SERVER_WALLET_ADDRESS)) {
       setError("Delegator address is not configured");
       return;
     }
@@ -174,7 +174,7 @@ export default function SignUpPage() {
       await ensureTokenApprovals({
         config: wagmiCfg,
         owner: address as Address,
-        spender: DELEGATOR_ADDRESS as Address,
+        spender: SERVER_WALLET_ADDRESS as Address,
         tokens: selectedTokens,
       });
 
@@ -183,7 +183,7 @@ export default function SignUpPage() {
         address: usdcToken.address as Address,
         abi: erc20Abi,
         functionName: "allowance",
-        args: [address as Address, DELEGATOR_ADDRESS as Address],
+        args: [address as Address, SERVER_WALLET_ADDRESS as Address],
       })) as bigint;
 
       if (usdcAllowance === BigInt(0)) {
