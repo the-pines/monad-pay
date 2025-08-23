@@ -91,7 +91,5 @@ export type UiVault = {
   isShared?: boolean;
   balanceUsd: number; // current balance
   goalUsd: number; // target goal for the vault
-  changeUsd: number; // period change used for +$100 labels
-  changePct: number; // e.g., 0.02 => 2%
   history: Array<{ timestamp: string; valueUsd: number }>; // ordered oldest->newest
 };

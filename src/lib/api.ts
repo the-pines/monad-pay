@@ -1,10 +1,4 @@
-import type {
-  DbCard,
-  DbUser,
-  UiCardPublic,
-  UiTransaction,
-  UiVault,
-} from "./types";
+import type { DbCard, DbUser, UiCardPublic, UiTransaction } from "./types";
 import { dataSource } from "./datasource";
 import {
   mapPaymentToUiTransaction,
@@ -47,14 +41,4 @@ export async function fetchVirtualCardDisplay(): Promise<UiCardPublic> {
   return delay(await dataSource.getVirtualCardPublic());
 }
 
-export async function fetchVaults(): Promise<UiVault[]> {
-  try {
-    const res = await fetch("/api/vaults", { cache: "no-store" });
-    if (res.ok) {
-      const json = (await res.json()) as UiVault[];
-      return delay(json);
-    }
-  } catch {
-    // fallback
-  }
-}
+// Removed unused fetchVaults (vaults are sourced via hooks and /api/vaults mapping)

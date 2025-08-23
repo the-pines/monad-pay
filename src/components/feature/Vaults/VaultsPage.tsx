@@ -78,8 +78,6 @@ const VaultsPage: React.FC = () => {
     if (!history.length) return null;
     const first = history[0].valueUsd;
     const last = history[history.length - 1].valueUsd;
-    const changeUsd = Number((last - first).toFixed(2));
-    const changePct = first ? (last - first) / first : 0;
     return {
       id: "all",
       name: "Vaults",
@@ -89,8 +87,6 @@ const VaultsPage: React.FC = () => {
       decimals: 18,
       balanceUsd: last,
       goalUsd: totalGoalUsd,
-      changeUsd,
-      changePct,
       history,
     };
   }, [vaults]);

@@ -20,15 +20,9 @@ import {
 import { parseUnits } from "viem";
 import { VAULT_ABI } from "@/config/contracts";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { formatToken } from "@/lib/format";
 
-function formatToken(amount: number, symbol?: string): string {
-  const s = symbol || "";
-  const abs = Math.abs(amount);
-  const maximumFractionDigits = abs < 1 ? 3 : abs < 10 ? 2 : 0;
-  return `${amount.toLocaleString(undefined, {
-    maximumFractionDigits,
-  })} ${s}`.trim();
-}
+// moved to src/lib/format.ts
 
 export default function VaultDetailPage() {
   const router = useRouter();
@@ -353,7 +347,7 @@ export default function VaultDetailPage() {
                     /* ignore */
                   }
                 }}
-                className="mt-2 w-full inline-flex items-center justify-center px-3 py-2 rounded-lg bg-gradient-to-r from-[#6e58ff] via-[#bba9ff] to-[#6e58ff] text-[#1a003d] font-semibold relative overflow-hidden group"
+                className="mt-2 w-full inline-flex items-center justify-center px-3 py-2 rounded-lg bg-gradient-to-r from-[#6e58ff] via-[#bba9ff] to-[#6e58ff] font-semibold relative overflow-hidden group"
               >
                 <span className="relative z-10">Withdraw</span>
                 <span className="absolute inset-0 translate-x-[-100%] bg-white/40 mix-blend-overlay group-hover:translate-x-[100%] transition-transform duration-700" />
@@ -374,8 +368,8 @@ export default function VaultDetailPage() {
             </button>
           </div>
           <div className="mt-2 text-[13px] text-white/60">
-            Share your vault address so others can contribute. Only you can
-            withdraw when you hit the goal.
+            Share your vault address so others can contribute. Only the owner
+            can withdraw when you hit the goal.
           </div>
         </div>
       </div>

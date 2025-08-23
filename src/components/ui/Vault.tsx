@@ -2,20 +2,14 @@
 
 import React from "react";
 import type { UiVault } from "@/lib/types";
+import { formatToken } from "@/lib/format";
 
 type VaultCardProps = {
   vault: UiVault;
   onSelect?: (vault: UiVault) => void;
 };
 
-function formatToken(amount: number, symbol?: string): string {
-  const s = symbol || "";
-  const abs = Math.abs(amount);
-  const maximumFractionDigits = abs < 1 ? 3 : abs < 10 ? 2 : 0;
-  return `${amount.toLocaleString(undefined, {
-    maximumFractionDigits,
-  })} ${s}`.trim();
-}
+// moved to src/lib/format.ts
 
 // Removed sparkline utilities
 

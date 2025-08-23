@@ -17,24 +17,9 @@ import {
   VAULT_FACTORY_ABI,
   VAULT_FACTORY_ADDRESS,
 } from "@/config/contracts";
+import { ERC20_TOKENS } from "@/config/tokens";
 
-// Dynamically populate ERC-20s from the connected wallet by reading token lists would
-// require an indexer. For now, we will hide static options and only surface tokens with
-// positive balances by probing a small, known set. You can expand this list as needed.
-const ERC20_CANDIDATES = [
-  {
-    symbol: "WMON",
-    name: "Wrapped Monad (WMON)",
-    address: "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701" as `0x${string}`,
-    decimals: 18,
-  },
-  {
-    symbol: "USDC",
-    name: "USD Coin (USDC)",
-    address: "0xf817257fed379853cDe0fa4F97AB987181B1E5Ea" as `0x${string}`,
-    decimals: 6,
-  },
-] as const;
+// Probe known ERC-20s from config; only show those with positive balances
 
 export default function CreateVaultClient() {
   const { isConnected, address } = useAccount();
@@ -43,7 +28,7 @@ export default function CreateVaultClient() {
     query: { enabled: Boolean(address) },
   });
   const erc20BalanceReads = useReadContracts({
-    contracts: ERC20_CANDIDATES.map((t) => ({
+    contracts: ERC20_TOKENS.map((t) => ({
       address: t.address,
       abi: ERC20_ABI,
       functionName: "balanceOf" as const,
@@ -91,7 +76,7 @@ export default function CreateVaultClient() {
       });
     }
     const balances = erc20BalanceReads.data ?? [];
-    ERC20_CANDIDATES.forEach((t, idx) => {
+    ERC20_TOKENS.forEach((t, idx) => {
       const balRaw = (balances[idx]?.result as bigint | undefined) ?? BigInt(0);
       const bal = Number(balRaw) / 10 ** t.decimals;
       if (bal > 0) {
