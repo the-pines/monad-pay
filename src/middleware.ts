@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+const COOKIE_MAX_AGE = 300;
 const WAGMI_COOKIE_KEY = 'wagmi.store';
 
 const PUBLIC_ROUTES = ['/login', '/signup'];
@@ -75,6 +76,16 @@ function getAddressFromWagmiCookie(raw?: string): string | null {
   }
 }
 
+function hasOnboardedCookie(
+  req: NextRequest,
+  address?: string | null
+): boolean {
+  const flag = req.cookies.get('ob')?.value === '1';
+  const addr = req.cookies.get('ob_addr')?.value?.toLowerCase();
+  if (!flag || !addr || !address) return false;
+  return addr === address.toLowerCase();
+}
+
 async function isOnboarded(
   req: NextRequest,
   address: string
@@ -90,7 +101,6 @@ async function isOnboarded(
     method: 'POST',
     headers,
     body: JSON.stringify({ address }),
-    cache: 'no-store',
   });
   if (userRes.status !== 200) return false;
   const { user } = await userRes.json();
@@ -101,9 +111,29 @@ async function isOnboarded(
     method: 'POST',
     headers,
     body: JSON.stringify({ userId: user.id }),
-    cache: 'no-store',
   });
   return cardRes.status === 200;
+}
+
+function setOnboardingCookies(res: NextResponse, address: string) {
+  res.cookies.set({
+    name: 'ob',
+    value: '1',
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: true,
+    path: '/',
+    maxAge: COOKIE_MAX_AGE,
+  });
+  res.cookies.set({
+    name: 'ob_addr',
+    value: address!.toLowerCase(),
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: true,
+    path: '/',
+    maxAge: COOKIE_MAX_AGE,
+  });
 }
 
 export async function middleware(req: NextRequest) {
@@ -115,34 +145,49 @@ export async function middleware(req: NextRequest) {
   );
   const isConnected = !!address;
 
-  // a) gate protected routes
+  // --- protected routes ---
   if (isProtectedRoute(pathname)) {
     if (!isConnected) {
       return redirectWithNext(req, '/login', pathname + search);
     }
 
+    // fast-path
+    if (hasOnboardedCookie(req, address)) {
+      return NextResponse.next();
+    }
+
+    // slow-path
     const onboarded = await isOnboarded(req, address!);
     if (!onboarded) {
       return redirectWithNext(req, '/signup', pathname + search);
     }
+
+    const res = NextResponse.next();
+    setOnboardingCookies(res, address);
+    return res;
   }
 
-  // a) auth routes
+  // fast-path
   if (isAuthRoute(pathname)) {
     if (!isConnected) return NextResponse.next();
 
-    const onboarded = await isOnboarded(req, address!);
-    if (onboarded) {
-      // connected + onboarded → keep them out of /login AND /signup
+    // FAST PATH
+    if (hasOnboardedCookie(req, address)) {
       return redirectWithNext(req, '/', pathname + search);
     }
 
-    // connected but not onboarded:
-    // visiting /login → move them to /signup (preserve ?next)
+    // slow-path
+    const onboarded = await isOnboarded(req, address!);
+    if (onboarded) {
+      const res = redirectWithNext(req, '/', pathname + search);
+      setOnboardingCookies(res, address);
+      return res;
+    }
+
+    // connected but not onboarded
     if (pathname === '/login' || pathname.startsWith('/login/')) {
       return redirectWithNext(req, '/signup');
     }
-
     return NextResponse.next();
   }
 

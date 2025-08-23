@@ -141,16 +141,40 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    return NextResponse.json(
+    const res = NextResponse.json(
       {
         created: true,
         user: createdUser,
         cardholder: createdCardholder,
         card: createdCard,
-        createdDbCard: createdDbCard,
+        createdDbCard,
       },
       { status: 201 }
     );
+
+    // 5m
+    const COOKIE_MAX_AGE = 300;
+
+    res.cookies.set({
+      name: 'ob',
+      value: '1',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      path: '/',
+      maxAge: COOKIE_MAX_AGE,
+    });
+    res.cookies.set({
+      name: 'ob_addr',
+      value: user.address.toLowerCase(),
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      path: '/',
+      maxAge: COOKIE_MAX_AGE,
+    });
+
+    return res;
   } catch (err) {
     console.error('[POST /api/create-user] error:', err);
     return NextResponse.json(
