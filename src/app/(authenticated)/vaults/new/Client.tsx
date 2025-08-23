@@ -7,13 +7,13 @@ import {
   useBalance,
   useReadContract,
   useReadContracts,
-  useSignTypedData,
+  useWriteContract,
 } from "wagmi";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { VAULT_FACTORY_ABI, VAULT_FACTORY_ADDRESS } from "@/config/contracts";
 import { ERC20_TOKENS } from "@/config/tokens";
-import { Abi, encodeFunctionData, erc20Abi } from "viem";
+import { erc20Abi } from "viem";
 
 // Probe known ERC-20s from config; only show those with positive balances
 
@@ -33,7 +33,7 @@ export default function CreateVaultClient() {
     query: { enabled: Boolean(address) },
     allowFailure: true,
   });
-  const { signTypedDataAsync } = useSignTypedData();
+  const { writeContractAsync } = useWriteContract();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSubmitted, setIsSubmitted] = React.useState(false);
@@ -163,44 +163,21 @@ export default function CreateVaultClient() {
       preVaultsRef.current =
         (creatorVaults.data as `0x${string}`[] | undefined) ?? [];
       const goalUnits = parseUnits(goal, decimals);
-      const fn = isNative ? "createVaultNative" : "createVaultERC20";
-      const args = isNative
-        ? [goalUnits, name || "My Vault"]
-        : [assetAddress as `0x${string}`, goalUnits, name || "My Vault"];
-
-      const data = encodeFunctionData({
-        abi: VAULT_FACTORY_ABI as Abi,
-        functionName: fn as "createVaultNative" | "createVaultERC20",
-        args: args as readonly unknown[],
-      });
-
-      const prepRes = await fetch("/api/metatx/prepare", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: address,
-          to: VAULT_FACTORY_ADDRESS,
-          data,
-          value: "0",
-          gas: "3000000",
-        }),
-      });
-      if (!prepRes.ok) throw new Error("Failed to prepare meta-tx");
-      const { request, domain, types } = await prepRes.json();
-
-      const signature = await signTypedDataAsync({
-        domain,
-        types,
-        primaryType: "ForwardRequest",
-        message: request,
-      });
-
-      const submitRes = await fetch("/api/metatx/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ request, signature }),
-      });
-      if (!submitRes.ok) throw new Error("Failed to submit meta-tx");
+      if (isNative) {
+        await writeContractAsync({
+          address: VAULT_FACTORY_ADDRESS,
+          abi: VAULT_FACTORY_ABI,
+          functionName: "createVaultNative",
+          args: [goalUnits, name || "My Vault"],
+        });
+      } else {
+        await writeContractAsync({
+          address: VAULT_FACTORY_ADDRESS,
+          abi: VAULT_FACTORY_ABI,
+          functionName: "createVaultERC20",
+          args: [assetAddress as `0x${string}`, goalUnits, name || "My Vault"],
+        });
+      }
       setIsSubmitted(true);
     } catch (err) {
       const message = (err as Error).message || "Failed to submit transaction";
@@ -266,33 +243,33 @@ export default function CreateVaultClient() {
   ]);
 
   return (
-    <div className="flex flex-col text-xl items-start w-[393px] mx-auto">
-      <div className="flex flex-col items-start w-full bg-[#200052] p-4">
-        <div className="flex items-center gap-2">
+    <div className='flex flex-col text-xl items-start w-[393px] mx-auto'>
+      <div className='flex flex-col items-start w-full bg-[#200052] p-4'>
+        <div className='flex items-center gap-2'>
           <Link
-            href="/vaults"
-            className="text-[#FBFAF9] hover:opacity-80 p-1 -ml-1 rounded"
+            href='/vaults'
+            className='text-[#FBFAF9] hover:opacity-80 p-1 -ml-1 rounded'
           >
             <span aria-hidden>←</span>
           </Link>
-          <h1 className="text-xl font-semibold text-[#FBFAF9]">Add a Vault</h1>
+          <h1 className='text-xl font-semibold text-[#FBFAF9]'>Add a Vault</h1>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="w-full bg-[#200052] px-4 pb-6">
-        <div className="mt-4">
-          <label className="block text-sm text-white/70 mb-1">Name</label>
+      <form onSubmit={handleSubmit} className='w-full bg-[#200052] px-4 pb-6'>
+        <div className='mt-4'>
+          <label className='block text-sm text-white/70 mb-1'>Name</label>
           <input
-            type="text"
+            type='text'
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Vacation"
+            placeholder='Vacation'
             disabled={isAddingShared}
-            className="w-[362px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9] disabled:opacity-60"
+            className='w-[362px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9] disabled:opacity-60'
           />
         </div>
-        <div className="mt-4">
-          <label className="block text-sm text-white/70 mb-1">Token</label>
+        <div className='mt-4'>
+          <label className='block text-sm text-white/70 mb-1'>Token</label>
           <select
             value={isNative ? "native" : assetAddress}
             onChange={(e) => {
@@ -312,71 +289,71 @@ export default function CreateVaultClient() {
               }
             }}
             disabled={isAddingShared}
-            className="w-[362px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9] disabled:opacity-60"
+            className='w-[362px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9] disabled:opacity-60'
           >
             {tokenOptions.map((t) => (
               <option
                 key={t.key}
                 value={t.isNative ? "native" : t.value}
-                className="bg-[#200052] text-[#FBFAF9]"
+                className='bg-[#200052] text-[#FBFAF9]'
               >
                 {t.label}
               </option>
             ))}
           </select>
         </div>
-        <div className="mt-4 flex gap-2">
-          <div className="flex-1">
-            <label className="block text-sm text-white/70 mb-1">
+        <div className='mt-4 flex gap-2'>
+          <div className='flex-1'>
+            <label className='block text-sm text-white/70 mb-1'>
               Goal (number of tokens)
             </label>
             <input
-              type="number"
+              type='number'
               min={0}
               step={"any"}
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
-              placeholder="1000"
+              placeholder='1000'
               disabled={isAddingShared}
-              className="w-[230px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9] disabled:opacity-60"
+              className='w-[230px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9] disabled:opacity-60'
             />
           </div>
         </div>
 
-        <div className="mt-6 flex items-center w-full">
-          <div className="h-px flex-1 bg-white/10" />
-          <span className="mx-3 text-xs text-white/50">
+        <div className='mt-6 flex items-center w-full'>
+          <div className='h-px flex-1 bg-white/10' />
+          <span className='mx-3 text-xs text-white/50'>
             OR add someone else’s vault
           </span>
-          <div className="h-px flex-1 bg-white/10" />
+          <div className='h-px flex-1 bg-white/10' />
         </div>
-        <div className="mt-3">
-          <label className="block text-sm text-white/70 mb-1">
+        <div className='mt-3'>
+          <label className='block text-sm text-white/70 mb-1'>
             Vault contract address
           </label>
           <input
-            type="text"
-            inputMode="text"
+            type='text'
+            inputMode='text'
             value={sharedAddress}
             onChange={(e) => setSharedAddress(e.target.value)}
-            placeholder="0x…"
-            className="w-[362px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9]"
+            placeholder='0x…'
+            className='w-[362px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9]'
           />
-          <div className="mt-1 text-[11px] text-white/50">
+          <div className='mt-1 text-[11px] text-white/50'>
             Enter a vault contract to contribute as a collaborator.
           </div>
         </div>
 
         {formError ? (
-          <div className="mt-2 text-xs text-red-400">{formError}</div>
+          <div className='mt-2 text-xs text-red-400'>{formError}</div>
         ) : null}
         {/* error surface handled via formError above */}
 
-        <div className="mt-5">
+        <div className='mt-5'>
           <button
-            type="submit"
+            type='submit'
             disabled={isSubmitting}
-            className="w-[362px] inline-flex items-center justify-center px-3 py-2 rounded-lg bg-[#2dd4bf] hover:brightness-110 text-[black] font-medium disabled:opacity-60"
+            className='w-[362px] inline-flex items-center justify-center px-3 py-2 rounded-lg bg-[#2dd4bf] hover:brightness-110 text-[black] font-medium disabled:opacity-60'
           >
             {isAddingShared
               ? "Add shared vault"

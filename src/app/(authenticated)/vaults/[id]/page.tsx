@@ -14,10 +14,9 @@ import {
   useAccount,
   useBalance,
   useReadContract,
-  useSignTypedData,
-  useChainId,
+  useWriteContract,
 } from "wagmi";
-import { Abi, encodeFunctionData, parseUnits } from "viem";
+import { parseUnits } from "viem";
 import { VAULT_ABI } from "@/config/contracts";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { formatToken } from "@/lib/format";
@@ -27,9 +26,10 @@ export default function VaultDetailPage() {
   const params = useParams<{ id: string }>();
   const { data: vaults } = useVaults();
   const { isConnected, address } = useAccount();
-  const { signTypedDataAsync } = useSignTypedData();
+  const { writeContractAsync } = useWriteContract();
   const { data: balanceUsd } = useUserBalanceUSD();
-  const chainId = useChainId();
+  // chainId available if needed
+  // const chainId = useChainId();
   const [isAddFundsOpen, setIsAddFundsOpen] = React.useState(false);
   const [addAmount, setAddAmount] = React.useState<string>("");
   const [addError, setAddError] = React.useState<string | null>(null);
@@ -73,37 +73,7 @@ export default function VaultDetailPage() {
     return Number(raw) / 10 ** d;
   }, [vault, nativeBalRead.data, erc20BalRead.data]);
 
-  // For ERC20 permit: read token name and nonces(owner)
-  const tokenNameRead = useReadContract({
-    address: (vault?.assetAddress ??
-      "0x0000000000000000000000000000000000000000") as `0x${string}`,
-    abi: erc20Abi,
-    functionName: "name",
-    query: {
-      enabled: Boolean(vault && !vault.isNative && vault.assetAddress),
-    },
-  });
-  const noncesAbi = [
-    {
-      type: "function",
-      name: "nonces",
-      stateMutability: "view",
-      inputs: [{ name: "owner", type: "address" }],
-      outputs: [{ name: "", type: "uint256" }],
-    },
-  ] as const satisfies Abi;
-  const noncesRead = useReadContract({
-    address: (vault?.assetAddress ??
-      "0x0000000000000000000000000000000000000000") as `0x${string}`,
-    abi: noncesAbi,
-    functionName: "nonces",
-    args: [address as `0x${string}`],
-    query: {
-      enabled: Boolean(
-        vault && !vault.isNative && vault.assetAddress && address
-      ),
-    },
-  });
+  // No permit flow; direct approve + contribute is used.
 
   const copyValue = React.useMemo(() => {
     if (!vault) return "";
@@ -173,89 +143,29 @@ export default function VaultDetailPage() {
     setIsSubmitting(true);
     try {
       const units = parseUnits(String(amount), vault.decimals);
-      let data: `0x${string}`;
-      let valueStr = "0";
       if (vault.isNative) {
-        // meta call contributeNative with value
-        data = encodeFunctionData({
-          abi: VAULT_ABI as Abi,
+        await writeContractAsync({
+          address: vault.id as `0x${string}`,
+          abi: VAULT_ABI,
           functionName: "contributeNative",
           args: [],
-        });
-        valueStr = units.toString();
-      } else {
-        // Build EIP-2612 permit for token and call contributeWithPermit
-        const tokenName =
-          (tokenNameRead.data as string | undefined) ?? vault.symbol;
-        const nonce = (noncesRead.data as bigint | undefined) ?? BigInt(0);
-        const deadlineSec = Math.floor(Date.now() / 1000) + 60 * 60; // +1h
-        const permitDomain = {
-          name: tokenName,
-          version: "1",
-          chainId,
-          verifyingContract: vault.assetAddress as `0x${string}`,
-        } as const;
-        const permitTypes = {
-          Permit: [
-            { name: "owner", type: "address" },
-            { name: "spender", type: "address" },
-            { name: "value", type: "uint256" },
-            { name: "nonce", type: "uint256" },
-            { name: "deadline", type: "uint256" },
-          ],
-        } as const;
-        const permitMessage = {
-          owner: address as `0x${string}`,
-          spender: vault.id as `0x${string}`,
           value: units,
-          nonce,
-          deadline: BigInt(deadlineSec),
-        } as const;
-        const sig = await signTypedDataAsync({
-          domain: permitDomain,
-          types: permitTypes,
-          primaryType: "Permit",
-          message: permitMessage,
         });
-        const r = `0x${sig.slice(2, 66)}` as `0x${string}`;
-        const s = `0x${sig.slice(66, 130)}` as `0x${string}`;
-        let v = parseInt(sig.slice(130, 132), 16);
-        if (v < 27) v += 27;
-
-        data = encodeFunctionData({
-          abi: VAULT_ABI as Abi,
-          functionName: "contributeWithPermit",
-          args: [units, BigInt(permitMessage.deadline), v, r, s],
+      } else {
+        // Standard approve + contribute flow
+        await writeContractAsync({
+          address: vault.assetAddress as `0x${string}`,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [vault.id as `0x${string}`, units],
+        });
+        await writeContractAsync({
+          address: vault.id as `0x${string}`,
+          abi: VAULT_ABI,
+          functionName: "contribute",
+          args: [units],
         });
       }
-
-      const prepRes = await fetch("/api/metatx/prepare", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: address,
-          to: vault.id,
-          data,
-          value: valueStr,
-          gas: "2000000",
-        }),
-      });
-      if (!prepRes.ok) throw new Error("Failed to prepare meta-tx");
-      const { request, domain, types } = await prepRes.json();
-
-      const signature = await signTypedDataAsync({
-        domain,
-        types,
-        primaryType: "ForwardRequest",
-        message: request,
-      });
-
-      const submitRes = await fetch("/api/metatx/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ request, signature }),
-      });
-      if (!submitRes.ok) throw new Error("Failed to submit meta-tx");
     } catch (err) {
       const msg =
         (err as Error)?.message || "Something went wrong. Please try again.";
@@ -392,38 +302,12 @@ export default function VaultDetailPage() {
                 type='button'
                 onClick={async () => {
                   try {
-                    const data = encodeFunctionData({
-                      abi: VAULT_ABI as Abi,
+                    await writeContractAsync({
+                      address: vault.id as `0x${string}`,
+                      abi: VAULT_ABI,
                       functionName: "withdraw",
                       args: [],
                     });
-                    const prepRes = await fetch("/api/metatx/prepare", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        from: address,
-                        to: vault.id,
-                        data,
-                        value: "0",
-                        gas: "1200000",
-                      }),
-                    });
-                    if (!prepRes.ok)
-                      throw new Error("Failed to prepare meta-tx");
-                    const { request, domain, types } = await prepRes.json();
-                    const signature = await signTypedDataAsync({
-                      domain,
-                      types,
-                      primaryType: "ForwardRequest",
-                      message: request,
-                    });
-                    const submitRes = await fetch("/api/metatx/submit", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ request, signature }),
-                    });
-                    if (!submitRes.ok)
-                      throw new Error("Failed to submit meta-tx");
                     const cw = canWithdrawRead as unknown as {
                       refetch?: () => Promise<unknown>;
                     };

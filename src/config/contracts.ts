@@ -1,6 +1,5 @@
 import VaultFactoryArtifact from "./contracts/VaultFactory.json";
 import VaultArtifact from "./contracts/Vault.json";
-import ERC2771ForwarderArtifact from "./contracts/ERC2771Forwarder.json";
 import PointsTokenArtifact from "./contracts/PointsToken.json";
 import AdminMinterLeaderboardArtifact from "./contracts/AdminMinterLeaderboard.json";
 import type { Abi } from "viem";
@@ -11,8 +10,6 @@ export const VAULT_FACTORY_ADDRESS = (process.env
 // ABI for VaultFactory (sourced from compiled artifact)
 export const VAULT_FACTORY_ABI = VaultFactoryArtifact.abi as Abi;
 export const VAULT_ABI = VaultArtifact.abi as Abi;
-
-export const FORWARDER_ABI = ERC2771ForwarderArtifact.abi as Abi;
 
 // Points / AdminMinterLeaderboard
 export const POINTS_TOKEN_ADDRESS = (process.env
@@ -25,6 +22,3 @@ export const AML_ABI = AdminMinterLeaderboardArtifact.abi as Abi;
 
 export const SERVER_WALLET_ADDRESS = (process.env
   .NEXT_PUBLIC_SERVER_WALLET_ADDRESS || "") as `0x${string}`;
-
-export const FORWARDER_ADDRESS = (process.env.NEXT_PUBLIC_FORWARDER_ADDRESS ||
-  "") as `0x${string}`;
