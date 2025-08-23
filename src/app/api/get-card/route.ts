@@ -1,6 +1,6 @@
 import z from 'zod';
 import { eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { cards } from '@/db/schema';
@@ -10,7 +10,7 @@ const BodySchema = z.object({
   userId: z.uuid()
 });
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const parsed = BodySchema.safeParse(body);

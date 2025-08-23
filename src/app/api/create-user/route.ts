@@ -1,14 +1,17 @@
 import z from 'zod';
 import Stripe from 'stripe';
-import { randomUUID } from 'crypto';
-import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
+import { isAddress } from 'viem';
+import { randomUUID } from 'crypto';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { cards, users } from '@/db/schema';
-import { isAddress } from 'viem';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {});
+const STRIPE_API_VERSION = '2025-07-30.basil';
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: STRIPE_API_VERSION,
+});
 
 // prettier-ignore
 const BodySchema = z.object({
@@ -44,7 +47,7 @@ const BodySchema = z.object({
   }),
 });
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const parsed = BodySchema.safeParse(body);
@@ -129,6 +132,7 @@ export async function POST(req: Request) {
         userId: createdUser.id,
         stripeCardId: createdCard.id,
         stripeCardHolderId: createdCardholder.id,
+        name: createdCard.cardholder.name,
         brand: createdCard.brand,
         last4: createdCard.last4,
         status: 'active',

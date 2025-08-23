@@ -1,7 +1,7 @@
 import z from 'zod';
 import { eq } from 'drizzle-orm';
 import { isAddress } from 'viem';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { users } from '@/db/schema';
@@ -15,7 +15,7 @@ const BodySchema = z.object({
     .refine((a) => isAddress(a), { message: "Invalid EVM address" }),
 });
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const parsed = BodySchema.safeParse(body);
