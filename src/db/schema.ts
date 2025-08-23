@@ -2,13 +2,13 @@ import { sql } from 'drizzle-orm';
 import {
   text,
   uuid,
+  index,
   pgEnum,
   integer,
   pgTable,
+  numeric,
   timestamp,
   uniqueIndex,
-  numeric,
-  index,
 } from 'drizzle-orm/pg-core';
 
 export const providerE         = pgEnum('provider_e', ['gmail', 'apple', 'wallet']); // prettier-ignore
