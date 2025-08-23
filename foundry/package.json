@@ -1,0 +1,24 @@
+{
+  "name": "monadpay-contracts",
+  "version": "1.0.0",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^22.17.2",
+    "forge-std": "github:foundry-rs/forge-std#v1.9.4",
+    "typescript": "~5.8.0",
+    "viem": "^2.34.0"
+  },
+  "scripts": {
+    "build": "forge build",
+    "compile": "forge build",
+    "test": "forge test -vvv",
+    "clean": "forge clean",
+    "fmt": "forge fmt",
+    "anvil": "anvil",
+    "deploy:factory": "forge script scripts/DeployFactory.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast",
+    "deploy:vault": "forge script scripts/CreateVault.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast --sig 'run(address,address,uint256)' $FACTORY $ASSET $GOAL"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0"
+  }
+}

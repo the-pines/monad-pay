@@ -2,83 +2,87 @@
 
 import React from "react";
 import type { UiVault } from "@/lib/types";
+import { formatToken } from "@/lib/format";
+import ProgressCircle from "./ProgressCircle";
 
 type VaultCardProps = {
   vault: UiVault;
   onSelect?: (vault: UiVault) => void;
 };
 
-function formatUsd(amount: number): string {
-  return `$${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-}
-
-function buildSparkPath(
-  values: number[],
-  width: number,
-  height: number
-): string {
-  if (values.length === 0) return "";
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const stepX = width / Math.max(values.length - 1, 1);
-  const points = values.map((v, i) => {
-    const x = i * stepX;
-    const y = height - ((v - min) / span) * height;
-    return `${x},${y}`;
-  });
-  return points.join(" ");
-}
-
-const Sparkline: React.FC<{
-  history: UiVault["history"];
-  className?: string;
-}> = ({ history, className }) => {
-  const width = 142.5;
-  const height = 56;
-  const values = history.map((h) => h.valueUsd);
-  const d = buildSparkPath(values, width, height);
-  return (
-    <svg
-      className={className}
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      aria-hidden
-    >
-      <polyline fill="none" stroke="#8A76F9" strokeWidth={3} points={d} />
-    </svg>
-  );
-};
-
 const VaultCard: React.FC<VaultCardProps> = ({ vault, onSelect }) => {
+  const progress = Math.max(
+    0,
+    Math.min(1, vault.balanceUsd / Math.max(1, vault.goalUsd))
+  );
+
   return (
     <button
       type="button"
       onClick={() => onSelect?.(vault)}
-      className="flex flex-col justify-center items-start p-4 gap-2 w-[174.5px] h-[167px] rounded-2xl bg-[rgba(251,250,249,0.06)] hover:bg-[rgba(251,250,249,0.1)] transition-colors"
+      className="group h-[167px] rounded-3xl bg-[var(--card-surface)] border border-[var(--card-border)] interactive-gradient
+                 hover:bg-[var(--card-surface-hover)] transition-colors soft-shadow
+                 focus:outline-none focus:ring-2 focus:ring-[#8A76F9]/60
+                 p-4 w-full text-left"
     >
-      <div className="flex flex-col items-start gap-1 w-[142.5px]">
-        <div className="flex flex-row items-center  w-full">
-          <span className="font-bold text-[17px] leading-[22px] text-foreground truncate">
+      {/* top row: emoji + name + optional badge */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {/* emoji only, no background */}
+          <span className="text-[18px]" aria-hidden>
+            {pickEmojiForVault(vault.name)}
+          </span>
+          <span className="font-semibold text-[15px] text-foreground truncate">
             {vault.name}
           </span>
         </div>
-        <div className="flex flex-row items-center w-full">
-          <span className="text-[15px] text-white/50 ">
-            {`Goal: ${formatUsd(vault.goalUsd)}`}
+
+        {vault.isShared ? (
+          <span className="ml-2 shrink-0 rounded-full bg-white/10 text-white/70 px-2 py-0.5 text-[10px] font-medium">
+            SHARED
           </span>
-        </div>
+        ) : null}
       </div>
-      <Sparkline history={vault.history} className="w-[142.5px] h-[56px]" />
-      <div
-        className="text-[13px] font-bold leading-[17px] ml-auto"
-        style={{ color: "#8A76F9" }}
-      >
-        {formatUsd(vault.balanceUsd)}
+
+      {/* goal line */}
+      <div className="mt-1 text-[12.5px] text-white/65 truncate">
+        Goal: {formatToken(vault.goalUsd, vault.symbol)}
+      </div>
+
+      {/* bottom row: amount + progress */}
+      <div className="mt-4 flex items-center justify-between">
+        <div className="display-text text-sm font-semibold bg-gradient-to-r from-[#8A76F9] to-[#b7a5ff] bg-clip-text text-transparent tabular-nums">
+          {formatToken(vault.balanceUsd, vault.symbol)}
+        </div>
+        <ProgressCircle
+          value={progress}
+          size={44}
+          thickness={6}
+          className="[--pc-start:#8A76F9] [--pc-end:#B7A5FF]"
+          showPercent={false}
+        />
       </div>
     </button>
   );
 };
+
+function pickEmojiForVault(name: string): string {
+  const lower = name.toLowerCase();
+  if (/(home|house|rent|mortgage)/.test(lower)) return "🏠";
+  if (/(car|auto|vehicle|bike)/.test(lower)) return "🚗";
+  if (/(trip|travel|vacation|holiday)/.test(lower)) return "✈️";
+  if (/(wedding|ring|marry)/.test(lower)) return "💍";
+  if (/(education|college|school)/.test(lower)) return "🎓";
+  if (/(tech|laptop|phone|pc)/.test(lower)) return "💻";
+  if (/(pet|dog|cat)/.test(lower)) return "🐶";
+  if (/(health|gym|fitness)/.test(lower)) return "💪";
+  if (/(emergency|rainy|buffer)/.test(lower)) return "☔️";
+  if (/(party|fun|gift|present)/.test(lower)) return "🎉";
+  const pool = ["🌟", "🌈", "🔥", "🪙", "🚀", "🌊", "🍀", "🧭", "🧠", "⭐️"];
+  let hash = 0;
+  for (let i = 0; i < lower.length; i++)
+    hash = (hash * 31 + lower.charCodeAt(i)) >>> 0;
+  return pool[hash % pool.length];
+}
 
 export default VaultCard;
