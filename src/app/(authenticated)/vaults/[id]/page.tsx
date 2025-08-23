@@ -21,6 +21,51 @@ import { VAULT_ABI } from "@/config/contracts";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { formatToken } from "@/lib/format";
 
+function VaultDetailSkeleton() {
+  return (
+    <div className='flex flex-col text-xl items-start w-[393px] mx-auto min-h-screen relative'>
+      <div className="pointer-events-none absolute inset-0 opacity-[0.03] [background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%22.9%22 numOctaves=%222%22 stitchTiles=%22stitch%22/></filter><rect width=%22100%%22 height=%22100%%22 filter=%22url(%23n)%22/></svg>')]" />
+
+      <div className='flex flex-col items-start w-full bg-[#200052] p-4 relative z-10'>
+        <div className='flex items-center gap-2 text-[#FBFAF9]'>
+          <div className='w-6 h-6 rounded-md bg-white/10 animate-pulse' />
+          <div className='h-4 w-12 rounded bg-white/10 animate-pulse' />
+        </div>
+        <div className='mt-3 h-6 w-40 rounded bg-white/10 animate-pulse' />
+        <div className='mt-4'>
+          <div className='w-[160px] h-[160px] rounded-full bg-white/10 animate-pulse' />
+        </div>
+      </div>
+
+      <div className='w-full bg-[#200052] px-4 pb-4 relative z-10'>
+        <div className='mt-3 w-[362px]'>
+          <div className='flex gap-3'>
+            <div className='w-[175px] h-[80px] rounded-2xl bg-[rgba(251,250,249,0.06)] p-3'>
+              <div className='h-3 w-16 rounded bg-white/10 animate-pulse' />
+              <div className='mt-2 h-5 w-24 rounded bg-white/10 animate-pulse' />
+            </div>
+            <div className='w-[175px] h-[80px] rounded-2xl bg-[rgba(251,250,249,0.06)] p-3'>
+              <div className='h-3 w-12 rounded bg-white/10 animate-pulse' />
+              <div className='mt-2 h-5 w-20 rounded bg-white/10 animate-pulse' />
+            </div>
+          </div>
+          <div className='mt-3'>
+            <div className='w-full h-[40px] rounded-lg bg-white/10 animate-pulse' />
+            <div className='mt-2 w-full h-[40px] rounded-lg bg-white/10 animate-pulse' />
+          </div>
+        </div>
+
+        <div className='mt-4'>
+          <div className='flex justify-center'>
+            <div className='h-[34px] w-[220px] rounded-lg bg-white/10 animate-pulse' />
+          </div>
+          <div className='mt-2 h-4 w-64 rounded bg-white/10 animate-pulse mx-auto' />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function VaultDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -35,11 +80,14 @@ export default function VaultDetailPage() {
   const [addError, setAddError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSharedInfoOpen, setIsSharedInfoOpen] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
 
   const vault = React.useMemo<UiVault | null>(() => {
     if (!vaults) return null;
     return vaults.find((v) => v.id === params.id) ?? null;
   }, [vaults, params.id]);
+
+  const isVaultsLoading = vaults === undefined;
 
   // Read user's balance depending on vault type
   const erc20BalRead = useReadContract({
@@ -119,6 +167,8 @@ export default function VaultDetailPage() {
     if (!copyValue) return;
     try {
       await navigator.clipboard.writeText(copyValue);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
     } catch {
       // no-op for environments without clipboard permissions
     }
@@ -203,6 +253,10 @@ export default function VaultDetailPage() {
   }, [vaultBalanceRead.data, vault?.decimals]);
   const progress = goalUnits > 0 ? Math.min(1, liveBalUnits / goalUnits) : 0;
   const progressPct = Math.round(progress * 100);
+
+  if (isVaultsLoading) {
+    return <VaultDetailSkeleton />;
+  }
 
   if (!vault) {
     return (
@@ -293,7 +347,7 @@ export default function VaultDetailPage() {
             <button
               type='button'
               onClick={() => setIsAddFundsOpen(true)}
-              className='w-full inline-flex items-center justify-center px-3 py-2 rounded-lg bg-[#2dd4bf] hover:brightness-110 text-[#0B1B1B] font-medium'
+              className='w-full inline-flex items-center justify-center px-3 py-2 rounded-lg bg-gradient-to-r from-[#8A76F9] to-[#2dd4bf] hover:brightness-110 text-[#0B1B1B] font-medium'
             >
               Add funds
             </button>
@@ -333,7 +387,7 @@ export default function VaultDetailPage() {
                     /* ignore */
                   }
                 }}
-                className='mt-2 w-full inline-flex items-center justify-center px-3 py-2 rounded-lg bg-[#2dd4bf] hover:brightness-110 text-[#0B1B1B] font-semibold'
+                className='mt-2 w-full inline-flex items-center justify-center px-3 py-2 rounded-lg bg-gradient-to-r from-[#8A76F9] to-[#2dd4bf] hover:brightness-110 text-[#0B1B1B] font-semibold'
               >
                 <span className='relative z-10'>Withdraw</span>
               </button>
@@ -349,7 +403,7 @@ export default function VaultDetailPage() {
               className='inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[rgba(251,250,249,0.06)] hover:bg-[rgba(251,250,249,0.1)] text-[#FBFAF9] text-sm'
             >
               <DocumentDuplicateIcon className='w-4 h-4' aria-hidden='true' />
-              Copy contract address
+              {copied ? "Address copied" : "Copy contract address"}
             </button>
           </div>
           <div className='mt-2 text-[13px] text-white/60'>
