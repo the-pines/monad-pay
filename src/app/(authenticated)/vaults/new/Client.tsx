@@ -12,12 +12,9 @@ import {
 } from "wagmi";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  ERC20_ABI,
-  VAULT_FACTORY_ABI,
-  VAULT_FACTORY_ADDRESS,
-} from "@/config/contracts";
+import { VAULT_FACTORY_ABI, VAULT_FACTORY_ADDRESS } from "@/config/contracts";
 import { ERC20_TOKENS } from "@/config/tokens";
+import { erc20Abi } from "viem";
 
 // Probe known ERC-20s from config; only show those with positive balances
 
@@ -30,7 +27,7 @@ export default function CreateVaultClient() {
   const erc20BalanceReads = useReadContracts({
     contracts: ERC20_TOKENS.map((t) => ({
       address: t.address,
-      abi: ERC20_ABI,
+      abi: erc20Abi,
       functionName: "balanceOf" as const,
       args: [address as `0x${string}`],
     })),

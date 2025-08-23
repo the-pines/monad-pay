@@ -1,12 +1,12 @@
-import z from 'zod';
-import Stripe from 'stripe';
-import { randomUUID } from 'crypto';
-import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
-
-import { db } from '@/db';
-import { cards, users } from '@/db/schema';
-import { isAddress } from 'viem';
+import z from "zod";
+import Stripe from "stripe";
+import { randomUUID } from "crypto";
+import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { cards, users } from "@/db/schema";
+import { isAddress, type Address } from "viem";
+import { fundUserWithUsdcVia0x } from "@/lib/swap";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {});
 
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         {
-          error: 'Invalid request body',
+          error: "Invalid request body",
           details: z.treeifyError(parsed.error),
         },
         { status: 400 }
@@ -79,11 +79,11 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    const baseKey = req.headers.get('Idempotency-Key') ?? `op_${randomUUID()}`;
+    const baseKey = req.headers.get("Idempotency-Key") ?? `op_${randomUUID()}`;
 
     const cardholderParams: Stripe.Issuing.CardholderCreateParams = {
-      type: 'individual',
-      status: 'active',
+      type: "individual",
+      status: "active",
       name: cardholder.name,
       email: cardholder.email,
       phone_number: cardholder.phone_number,
@@ -115,9 +115,9 @@ export async function POST(req: Request) {
 
     const cardParams: Stripe.Issuing.CardCreateParams = {
       cardholder: createdCardholder.id,
-      currency: 'gbp',
-      type: 'virtual',
-      status: 'active',
+      currency: "gbp",
+      type: "virtual",
+      status: "active",
     };
     const createdCard = await stripe.issuing.cards.create(cardParams, {
       idempotencyKey: `${baseKey}:card`,
@@ -131,7 +131,7 @@ export async function POST(req: Request) {
         stripeCardHolderId: createdCardholder.id,
         brand: createdCard.brand,
         last4: createdCard.last4,
-        status: 'active',
+        status: "active",
       })
       .returning();
 
@@ -150,29 +150,35 @@ export async function POST(req: Request) {
     const COOKIE_MAX_AGE = 300;
 
     res.cookies.set({
-      name: 'ob',
-      value: '1',
+      name: "ob",
+      value: "1",
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: "lax",
       secure: true,
-      path: '/',
+      path: "/",
       maxAge: COOKIE_MAX_AGE,
     });
     res.cookies.set({
-      name: 'ob_addr',
+      name: "ob_addr",
       value: user.address.toLowerCase(),
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: "lax",
       secure: true,
-      path: '/',
+      path: "/",
       maxAge: COOKIE_MAX_AGE,
+    });
+
+    // After user creation: 0x swap with our server wallet + fund user wallet
+    // tODO only send if they have les than 1 usdc in wallet
+    fundUserWithUsdcVia0x(user.address as Address).catch((err) => {
+      console.error("[create-user] Swap/send USDC failed:", err);
     });
 
     return res;
   } catch (err) {
-    console.error('[POST /api/create-user] error:', err);
+    console.error("[POST /api/create-user] error:", err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

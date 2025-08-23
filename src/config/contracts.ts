@@ -20,57 +20,5 @@ export const AML_ADDRESS = (process.env.NEXT_PUBLIC_AML_ADDRESS ||
 export const POINTS_TOKEN_ABI = PointsTokenArtifact.abi as Abi;
 export const AML_ABI = AdminMinterLeaderboardArtifact.abi as Abi;
 
-// Minimal ERC20 ABI bits that we might need
-export const ERC20_ABI = [
-  {
-    type: "function",
-    name: "decimals",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "uint8" }],
-  },
-  {
-    type: "function",
-    name: "symbol",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "string" }],
-  },
-  {
-    type: "function",
-    name: "balanceOf",
-    stateMutability: "view",
-    inputs: [{ name: "account", type: "address" }],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "allowance",
-    stateMutability: "view",
-    inputs: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-    ],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "approve",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ type: "bool" }],
-  },
-  {
-    type: "function",
-    name: "transfer",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ type: "bool" }],
-  },
-] as const;
+export const DELEGATOR_ADDRESS = (process.env.NEXT_PUBLIC_DELEGATOR_ADDRESS ||
+  "") as `0x${string}`;

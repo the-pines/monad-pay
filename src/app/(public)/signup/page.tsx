@@ -1,83 +1,37 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppKitAccount, useDisconnect } from "@reown/appkit/react";
 import { generateRandomCardholder } from "@/lib/create-fake-form-data";
+import { DELEGATOR_ADDRESS } from "@/config/contracts";
+import { ERC20_TOKENS } from "@/config/tokens";
+import { isAddress, type Address } from "viem";
+import { erc20Abi } from "viem";
+import { useConfig } from "wagmi";
+import { readContract } from "wagmi/actions";
+import {
+  buildCardholderBody,
+  createUser as createUserApi,
+  ensureTokenApprovals,
+  generateDOBWithinAgeRange,
+} from "@/lib/signup";
 
-type CardholderBody = {
-  user: { name: string; address: string; provider: string };
-  cardholder: {
-    name: string;
-    individual: {
-      first_name: string;
-      last_name: string;
-      dob: { day: number; month: number; year: number };
-    };
-    billing: {
-      address: {
-        line1: string;
-        line2?: string;
-        city: string;
-        state: string;
-        postal_code: string;
-        country: "GB";
-      };
-    };
-    email?: string;
-    phone_number?: string;
-    metadata?: Record<string, string>;
-  };
-};
+type CardholderBody = Parameters<typeof buildCardholderBody>[0] extends never
+  ? never
+  : ReturnType<typeof buildCardholderBody>;
 
-async function createUser(body: CardholderBody): Promise<void> {
-  const res = await fetch("/api/create-user", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    cache: "no-store",
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    let message = "Failed to create user";
-    try {
-      const data = await res.json();
-      if (typeof data?.error === "string") {
-        message = data.error;
-      } else if (typeof data?.message === "string") {
-        message = data.message;
-      } else if (data) {
-        message = JSON.stringify(data);
-      }
-    } catch {
-      try {
-        const text = await res.text();
-        if (text) message = text;
-      } catch {}
-    }
-    throw new Error(message);
-  }
-}
-
-function generateDOBWithinAgeRange(minAge: number, maxAge: number) {
-  const now = new Date();
-  const latestDOB = new Date(now);
-  latestDOB.setFullYear(now.getFullYear() - minAge);
-  const earliestDOB = new Date(now);
-  earliestDOB.setFullYear(now.getFullYear() - maxAge);
-
-  const randomTime =
-    earliestDOB.getTime() +
-    Math.random() * (latestDOB.getTime() - earliestDOB.getTime());
-  const d = new Date(randomTime);
-  return { day: d.getDate(), month: d.getMonth() + 1, year: d.getFullYear() };
-}
+type Step = 1 | 2 | 3;
 
 export default function SignUpPage() {
   const router = useRouter();
   const { address, isConnected } = useAppKitAccount();
   const { disconnect } = useDisconnect();
+  const wagmiCfg = useConfig();
+
+  // wizard
+  const [step, setStep] = useState<Step>(1);
 
   // Required
   const [name, setName] = useState("");
@@ -96,61 +50,42 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
+  // token selection
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+
+  // request state
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ackTwoClicks, setAckTwoClicks] = useState(false);
+
+  // persisted body between steps
+  const [pendingBody, setPendingBody] = useState<CardholderBody | null>(null);
 
   // Inputs for DOB are hidden; values are generated automatically
 
-  const onSubmit = useCallback(
+  const onSubmitInfo = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       setError(null);
-
-      const payload: CardholderBody = {
-        user: {
-          name: `${firstName} ${lastName}`,
-          address: address!,
-          provider: "wallet",
-        },
-        cardholder: {
-          name: name.trim(),
-          individual: {
-            first_name: firstName.trim(),
-            last_name: lastName.trim(),
-            dob: { day: dobDay, month: dobMonth, year: dobYear },
-          },
-          billing: {
-            address: {
-              line1: line1.trim(),
-              line2: undefined,
-              city: city.trim(),
-              state: state.trim(),
-              postal_code: postalCode.trim(),
-              country: "GB",
-            },
-          },
-          email: email.trim() || undefined,
-          phone_number: phone.trim() || undefined,
-          metadata: undefined,
-        },
-      };
-
-      setSubmitting(true);
-
-      try {
-        await createUser(payload);
-        router.replace("/");
-      } catch (err) {
-        console.log(err);
-        const serverMsg = err instanceof Error ? err.message : "";
-        const suffix =
-          serverMsg && serverMsg !== "Failed to create user"
-            ? ` — ${serverMsg}`
-            : "";
-        setError(`Failed to create account${suffix}`);
-      } finally {
-        setSubmitting(false);
+      if (!address || !isAddress(address)) {
+        setError("Wallet not connected");
+        return;
       }
+
+      const payload = buildCardholderBody({
+        address,
+        name,
+        firstName,
+        lastName,
+        dob: { day: dobDay, month: dobMonth, year: dobYear },
+        billing: { line1, city, state, postal_code: postalCode },
+        email,
+        phone,
+      });
+
+      setPendingBody(payload);
+      // move to token selection
+      setStep(2);
     },
     [
       address,
@@ -166,7 +101,6 @@ export default function SignUpPage() {
       postalCode,
       email,
       phone,
-      router,
     ]
   );
 
@@ -196,6 +130,76 @@ export default function SignUpPage() {
       router.replace("/login");
     }
   }, [disconnect, router]);
+
+  const usdcToken = useMemo(
+    () => ERC20_TOKENS.find((t) => t.symbol === "USDC"),
+    []
+  );
+
+  // ensure USDC is always selected
+  useEffect(() => {
+    if (step === 2 && usdcToken) {
+      setSelected((prev) => ({ ...prev, [usdcToken.address]: true }));
+    }
+  }, [step, usdcToken]);
+
+  const toggleToken = useCallback((addr: string) => {
+    setSelected((prev) => {
+      const next = { ...prev };
+      next[addr] = !next[addr];
+      return next;
+    });
+  }, []);
+
+  const selectedTokens = useMemo(
+    () => ERC20_TOKENS.filter((t) => selected[t.address]),
+    [selected]
+  );
+
+  const approveSelected = useCallback(async () => {
+    if (!address || !pendingBody) return;
+    if (!usdcToken) {
+      setError("USDC not configured");
+      return;
+    }
+    if (!DELEGATOR_ADDRESS || !isAddress(DELEGATOR_ADDRESS)) {
+      setError("Delegator address is not configured");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      // sequentially approve selected tokens if not already approved
+      await ensureTokenApprovals({
+        config: wagmiCfg,
+        owner: address as Address,
+        spender: DELEGATOR_ADDRESS as Address,
+        tokens: selectedTokens,
+      });
+
+      // verify USDC allowance
+      const usdcAllowance = (await readContract(wagmiCfg, {
+        address: usdcToken.address as Address,
+        abi: erc20Abi,
+        functionName: "allowance",
+        args: [address as Address, DELEGATOR_ADDRESS as Address],
+      })) as bigint;
+
+      if (usdcAllowance === BigInt(0)) {
+        throw new Error("USDC approval required to proceed");
+      }
+
+      // create account after approvals
+      await createUserApi(pendingBody);
+      router.replace("/");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Approval failed";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [address, pendingBody, selectedTokens, usdcToken, wagmiCfg, router]);
 
   return (
     <main className="relative min-h-[100svh] overflow-hidden">
@@ -229,78 +233,204 @@ export default function SignUpPage() {
         <div className="w-full max-w-[640px]">
           <div className="text-center space-y-3 mb-6">
             <h1 className="display text-3xl sm:text-[32px] font-semibold leading-tight">
-              Set up your account
+              {step === 1 && "Set up your account"}
+              {step === 2 && "Select tokens to approve"}
+              {step === 3 && "Approve selected tokens"}
             </h1>
-            <p className="text-white/70 text-sm leading-relaxed max-w-[46ch] mx-auto">
-              We need some more details to set up your card. Feel free to put a
-              pseudonym
-            </p>
+            {step === 1 && (
+              <p className="text-white/70 text-sm leading-relaxed max-w-[46ch] mx-auto">
+                We need some more details to set up your card. Feel free to put
+                a pseudonym
+              </p>
+            )}
+            {step === 2 && (
+              <p className="text-white/70 text-sm leading-relaxed max-w-[56ch] mx-auto">
+                Choose which ERC20s to grant spending approval to our settlement
+                wallet.
+                <span className="ml-1 font-medium text-white">
+                  USDC is required.
+                </span>
+              </p>
+            )}
+            {step === 3 && (
+              <p className="text-white/70 text-sm leading-relaxed max-w-[56ch] mx-auto">
+                Confirm the approval transactions in your wallet. This lets us
+                settle payments on your behalf.
+              </p>
+            )}
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded-3xl p-5 sm:p-6 backdrop-blur-md shadow-sm">
-            <form onSubmit={onSubmit} className="space-y-5">
-              {/* Display name */}
-              <div>
-                <label
-                  htmlFor="name"
-                  className="mb-1 block text-xs font-medium text-white/80"
+            {step === 1 && (
+              <form onSubmit={onSubmitInfo} className="space-y-5">
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="mb-1 block text-xs font-medium text-white/80"
+                  >
+                    Display name (max 24 characters)*
+                  </label>
+                  <input
+                    id="name"
+                    value={name}
+                    required
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
+                    placeholder="MonadRox"
+                  />
+                  <p className="mt-1 text-xs text-white/60">
+                    This will be displayed on your card. No special characters
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-white/80">
+                      First name*
+                    </label>
+                    <input
+                      value={firstName}
+                      required
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
+                      placeholder="Alex"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-white/80">
+                      Last name*
+                    </label>
+                    <input
+                      value={lastName}
+                      required
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
+                      placeholder="Johnson"
+                    />
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="rounded-xl border border-red-200/40 bg-red-400/10 px-3 py-2 text-sm text-red-200">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full rounded-2xl py-3 font-semibold text-black/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-white/40 animated-gradient"
                 >
-                  Display name (max 24 characters)*
-                </label>
-                <input
-                  id="name"
-                  value={name}
-                  required
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
-                  placeholder="MonadRox"
-                />
-                <p className="mt-1 text-xs text-white/60">
-                  This will be displayed on your card. No special characters
+                  Next
+                </button>
+              </form>
+            )}
+
+            {step === 2 && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  {ERC20_TOKENS.map((t) => {
+                    const checked = !!selected[t.address];
+                    const isUsdc = t.symbol === "USDC";
+                    return (
+                      <label
+                        key={t.address}
+                        className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium">
+                            {t.symbol}
+                          </span>
+                          <span className="text-xs text-white/60">
+                            {t.name}
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={isUsdc ? true : checked}
+                          onChange={() =>
+                            !isUsdc ? toggleToken(t.address) : null
+                          }
+                          disabled={isUsdc}
+                          className="h-4 w-4"
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {error && (
+                  <div className="rounded-xl border border-red-200/40 bg-red-400/10 px-3 py-2 text-sm text-red-200">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setStep(1)}
+                    className="flex-1 rounded-2xl py-3 font-semibold border border-white/15"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => setStep(3)}
+                    className="flex-1 rounded-2xl py-3 font-semibold text-black/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-white/40 animated-gradient"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-sm text-white/80 mb-2">Approving for:</p>
+                  <ul className="text-sm text-white/70 list-disc ml-5 space-y-1">
+                    {selectedTokens.map((t) => (
+                      <li key={t.address}>{t.symbol}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                {!ackTwoClicks && (
+                  <button
+                    type="button"
+                    onClick={() => setAckTwoClicks(true)}
+                    className="w-full rounded-2xl py-3 font-semibold border border-white/15 bg-white/5 text-white/90 hover:bg-white/10"
+                  >
+                    You&apos;ll need to click twice — first to sign, then to
+                    approve
+                  </button>
+                )}
+
+                {error && (
+                  <div className="rounded-xl border border-red-200/40 bg-red-400/10 px-3 py-2 text-sm text-red-200">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setStep(2)}
+                    disabled={submitting}
+                    className="flex-1 rounded-2xl py-3 font-semibold border border-white/15 disabled:opacity-60"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={approveSelected}
+                    disabled={submitting || !ackTwoClicks}
+                    className="flex-1 rounded-2xl py-3 font-semibold text-black/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-white/40 animated-gradient disabled:opacity-60"
+                  >
+                    {submitting ? "Confirm in wallet..." : "Approve & Create"}
+                  </button>
+                </div>
+                <p className="text-xs text-white/60 text-center">
+                  Your wallet may show multiple prompts if you selected several
+                  tokens.
                 </p>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-white/80">
-                    First name*
-                  </label>
-                  <input
-                    value={firstName}
-                    required
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
-                    placeholder="Alex"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-white/80">
-                    Last name*
-                  </label>
-                  <input
-                    value={lastName}
-                    required
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
-                    placeholder="Johnson"
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <div className="rounded-xl border border-red-200/40 bg-red-400/10 px-3 py-2 text-sm text-red-200">
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full rounded-2xl py-3 font-semibold text-black/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-white/40 animated-gradient disabled:opacity-60"
-              >
-                {submitting ? "Creating..." : "Create account"}
-              </button>
-            </form>
+            )}
           </div>
         </div>
 

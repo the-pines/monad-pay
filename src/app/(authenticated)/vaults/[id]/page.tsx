@@ -9,7 +9,7 @@ import {
   ArrowLeftIcon,
   DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
-import { ERC20_ABI } from "@/config/contracts";
+import { erc20Abi } from "viem";
 import {
   useAccount,
   useBalance,
@@ -46,7 +46,7 @@ export default function VaultDetailPage() {
   const erc20BalRead = useReadContract({
     address: (vault?.assetAddress ??
       "0x0000000000000000000000000000000000000000") as `0x${string}`,
-    abi: ERC20_ABI,
+    abi: erc20Abi,
     functionName: "balanceOf",
     args: [address as `0x${string}`],
     query: {
@@ -164,7 +164,7 @@ export default function VaultDetailPage() {
         // Transfer ERC20 tokens directly to the vault address
         const hash = await writeContractAsync({
           address: vault.assetAddress,
-          abi: ERC20_ABI,
+          abi: erc20Abi,
           functionName: "transfer",
           args: [vault.id as `0x${string}`, units],
         });

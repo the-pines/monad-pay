@@ -4,7 +4,8 @@ import { Chain, createPublicClient, http } from "viem";
 import type { Abi } from "viem";
 import { db } from "@/db";
 import { users, vaults } from "@/db/schema";
-import { VAULT_ABI, ERC20_ABI } from "@/config/contracts";
+import { VAULT_ABI } from "@/config/contracts";
+import { erc20Abi } from "viem";
 import type { UiVault } from "@/lib/types";
 import { monadTestnet } from "@reown/appkit/networks";
 
@@ -44,9 +45,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json([] satisfies UiVault[]);
     }
 
-    // Build multicall contracts: goal, name, isNative, asset, assetBalance, creator
     const VAULT_ABI_TYPED = VAULT_ABI as Abi;
-    const ERC20_ABI_TYPED = ERC20_ABI as Abi;
+    const ERC20_ABI_TYPED = erc20Abi as Abi;
 
     const contracts: Array<{
       address: `0x${string}`;
