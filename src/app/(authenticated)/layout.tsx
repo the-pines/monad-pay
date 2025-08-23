@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { Toaster } from '@/components/ui';
-import { Header, Navigation } from '@/components/layout';
-import AuthProvider from '@/contexts/AuthContext';
-import PageTransition from '@/app/page-transition';
+import { Header, Navigation } from "@/components/layout";
+import AuthProvider from "@/contexts/AuthContext";
+import PageTransition from "@/app/page-transition";
+import { UserProvider } from "@/contexts/UserContext";
 
 export default function AuthenticatedLayout({
   children,
@@ -12,7 +12,7 @@ export default function AuthenticatedLayout({
     <>
       <Header />
 
-      <main className="relative mx-auto max-w-[393px] w-full pt-[104px] pb-[calc(56px+env(safe-area-inset-bottom))]">
+      <main className='relative mx-auto max-w-[393px] w-full pt-[104px] pb-[calc(56px+env(safe-area-inset-bottom))]'>
         <AuthProvider>
           <PageTransition>
             <UserProvider>{children}</UserProvider>
@@ -21,7 +21,6 @@ export default function AuthenticatedLayout({
       </main>
 
       <Navigation />
-      <Toaster />
     </>
   );
 }

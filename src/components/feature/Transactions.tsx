@@ -121,7 +121,7 @@ export default function Transactions() {
   );
   const monthsScrollRef = React.useRef<HTMLDivElement | null>(null);
 
-  const { data, loading } = useUserTransactions();
+  const { data, loading } = useUserTransactions(50);
   const grouped = React.useMemo(
     () => groupTransactionsByMonthAndDay(data ?? []),
     [data]
@@ -145,20 +145,20 @@ export default function Transactions() {
     grouped[grouped.length - 1];
 
   return (
-    <section className="px-4 py-2">
-      <h1 className="text-xl font-semibold mb-4">Transactions</h1>
+    <section className='px-4 py-2'>
+      <h1 className='text-xl font-semibold mb-4'>Transactions</h1>
       {!loading && grouped.length === 0 ? (
-        <div className="mt-6">
-          <div className="rounded-3xl bg-white/5 border border-white/10 p-6 text-center soft-shadow">
-            <div className="text-lg font-semibold">No transactions yet</div>
-            <div className="text-sm text-white/70 mt-1">
+        <div className='mt-6'>
+          <div className='rounded-3xl bg-white/5 border border-white/10 p-6 text-center soft-shadow'>
+            <div className='text-lg font-semibold'>No transactions yet</div>
+            <div className='text-sm text-white/70 mt-1'>
               Your recent activity will appear here.
             </div>
           </div>
         </div>
       ) : null}
       {/* Month selector */}
-      <div className="sticky top-[104px] z-10 -mx-4 bg-[--background]">
+      <div className='sticky top-[104px] z-10 -mx-4 bg-[--background]'>
         <div
           ref={monthsScrollRef}
           className={`px-4 py-3 flex items-center gap-3 ${
@@ -166,11 +166,11 @@ export default function Transactions() {
           }`}
         >
           {loading ? (
-            <div className="flex items-center gap-3">
+            <div className='flex items-center gap-3'>
               {Array.from({ length: 4 }).map((_, idx) => (
                 <div
                   key={idx}
-                  className="h-8 w-24 shrink-0 rounded-full bg-white/10 animate-pulse"
+                  className='h-8 w-24 shrink-0 rounded-full bg-white/10 animate-pulse'
                   style={{ animationDelay: `${idx * 80}ms` }}
                 />
               ))}
@@ -179,11 +179,11 @@ export default function Transactions() {
             grouped.map((m, idx) => (
               <div
                 key={m.monthKey}
-                className="motion-safe:animate-[slideIn_260ms_ease-out_forwards] opacity-0"
+                className='motion-safe:animate-[slideIn_260ms_ease-out_forwards] opacity-0'
                 style={{ animationDelay: `${idx * 40}ms` }}
               >
                 <button
-                  type="button"
+                  type='button'
                   onClick={() => setSelectedMonthKey(m.monthKey)}
                   className={
                     "shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors " +
@@ -201,15 +201,15 @@ export default function Transactions() {
       </div>
 
       {/* Scrollable list */}
-      <div className="max-h-[calc(100dvh-180px)] overflow-y-auto pb-8">
+      <div className='max-h-[calc(100dvh-180px)] overflow-y-auto pb-8'>
         {loading ? (
-          <div className="mt-4 space-y-4">
-            <div className="h-3 w-24 bg-white/10 rounded animate-pulse" />
-            <div className="space-y-2">
+          <div className='mt-4 space-y-4'>
+            <div className='h-3 w-24 bg-white/10 rounded animate-pulse' />
+            <div className='space-y-2'>
               {Array.from({ length: 6 }).map((_, idx) => (
                 <div
                   key={idx}
-                  className="h-[62px] rounded-3xl bg-[var(--card-surface)] border border-[var(--card-border)] soft-shadow animate-pulse"
+                  className='h-[62px] rounded-3xl bg-[var(--card-surface)] border border-[var(--card-border)] soft-shadow animate-pulse'
                   style={{ animationDelay: `${idx * 60}ms` }}
                 />
               ))}
@@ -217,20 +217,20 @@ export default function Transactions() {
           </div>
         ) : (
           selectedMonth?.days.map((group) => (
-            <div key={group.dayKey} className="mt-4">
-              <div className="flex items-baseline justify-between mb-2">
-                <h3 className="text-[13px] tracking-wide uppercase text-[--foreground]/60">
+            <div key={group.dayKey} className='mt-4'>
+              <div className='flex items-baseline justify-between mb-2'>
+                <h3 className='text-[13px] tracking-wide uppercase text-[--foreground]/60'>
                   {group.dateLabel}
                 </h3>
               </div>
 
-              <div className="space-y-2">
+              <div className='space-y-2'>
                 {group.items.map((t, idx) => {
                   const d = new Date(t.datetime);
                   return (
                     <div
                       key={t.id}
-                      className="motion-safe:animate-[slideIn_280ms_ease-out_forwards] opacity-0"
+                      className='motion-safe:animate-[slideIn_280ms_ease-out_forwards] opacity-0'
                       style={{ animationDelay: `${idx * 40}ms` }}
                     >
                       <Transaction
