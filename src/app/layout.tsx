@@ -39,6 +39,17 @@ const satoshi = localFont({
 export const metadata: Metadata = {
   title: "Monad Pay",
   description: "enirehtac em yrram",
+  icons: {
+    icon: [
+      { url: "/assets/favicon.ico", rel: "icon", type: "image/x-icon" },
+      {
+        url: "/assets/favicon.ico",
+        rel: "shortcut icon",
+        type: "image/x-icon",
+      },
+    ],
+    apple: [{ url: "/assets/apple-touch-icon.png", sizes: "180x180" }],
+  },
 };
 
 export default async function RootLayout({

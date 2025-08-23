@@ -9,15 +9,15 @@ import {
   ArrowLeftIcon,
   DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
-import { ERC20_ABI } from "@/config/contracts";
+import { erc20Abi } from "viem";
 import {
   useAccount,
   useBalance,
   useReadContract,
-  useWriteContract,
-  useWaitForTransactionReceipt,
+  useSignTypedData,
+  useChainId,
 } from "wagmi";
-import { parseUnits } from "viem";
+import { Abi, encodeFunctionData, parseUnits } from "viem";
 import { VAULT_ABI } from "@/config/contracts";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { formatToken } from "@/lib/format";
@@ -26,11 +26,12 @@ import { useToastContext } from "@/contexts/ToastContext";
 export default function VaultDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const { data: vaults, loading } = useVaults();
+  const { data: vaults } = useVaults();
   const { isConnected, address } = useAccount();
-  const { writeContractAsync } = useWriteContract();
+  const { signTypedDataAsync } = useSignTypedData();
   const { data: balanceUsd } = useUserBalanceUSD();
   const { push } = useToastContext();
+  const chainId = useChainId();
   const [isAddFundsOpen, setIsAddFundsOpen] = React.useState(false);
   const [addAmount, setAddAmount] = React.useState<string>("");
   const [addError, setAddError] = React.useState<string | null>(null);
@@ -46,7 +47,7 @@ export default function VaultDetailPage() {
   const erc20BalRead = useReadContract({
     address: (vault?.assetAddress ??
       "0x0000000000000000000000000000000000000000") as `0x${string}`,
-    abi: ERC20_ABI,
+    abi: erc20Abi,
     functionName: "balanceOf",
     args: [address as `0x${string}`],
     query: {
@@ -73,6 +74,38 @@ export default function VaultDetailPage() {
     const d = vault.decimals ?? 18;
     return Number(raw) / 10 ** d;
   }, [vault, nativeBalRead.data, erc20BalRead.data]);
+
+  // For ERC20 permit: read token name and nonces(owner)
+  const tokenNameRead = useReadContract({
+    address: (vault?.assetAddress ??
+      "0x0000000000000000000000000000000000000000") as `0x${string}`,
+    abi: erc20Abi,
+    functionName: "name",
+    query: {
+      enabled: Boolean(vault && !vault.isNative && vault.assetAddress),
+    },
+  });
+  const noncesAbi = [
+    {
+      type: "function",
+      name: "nonces",
+      stateMutability: "view",
+      inputs: [{ name: "owner", type: "address" }],
+      outputs: [{ name: "", type: "uint256" }],
+    },
+  ] as const satisfies Abi;
+  const noncesRead = useReadContract({
+    address: (vault?.assetAddress ??
+      "0x0000000000000000000000000000000000000000") as `0x${string}`,
+    abi: noncesAbi,
+    functionName: "nonces",
+    args: [address as `0x${string}`],
+    query: {
+      enabled: Boolean(
+        vault && !vault.isNative && vault.assetAddress && address
+      ),
+    },
+  });
 
   const copyValue = React.useMemo(() => {
     if (!vault) return "";
@@ -101,10 +134,7 @@ export default function VaultDetailPage() {
     },
   });
 
-  const [pendingTxHash, setPendingTxHash] = React.useState<
-    `0x${string}` | undefined
-  >(undefined);
-  const waitAddFunds = useWaitForTransactionReceipt({ hash: pendingTxHash });
+  const [isSubmittingMeta] = React.useState(false);
   const prevCanWithdraw = React.useRef<boolean>(false);
   const [isCelebrating, setIsCelebrating] = React.useState(false);
   React.useEffect(() => {
@@ -150,26 +180,89 @@ export default function VaultDetailPage() {
     setIsSubmitting(true);
     try {
       const units = parseUnits(String(amount), vault.decimals);
+      let data: `0x${string}`;
+      let valueStr = "0";
       if (vault.isNative) {
-        // Send native MON to the vault via contributeNative
-        const hash = await writeContractAsync({
-          address: vault.id as `0x${string}`,
-          abi: VAULT_ABI,
+        // meta call contributeNative with value
+        data = encodeFunctionData({
+          abi: VAULT_ABI as Abi,
           functionName: "contributeNative",
           args: [],
-          value: units,
         });
-        setPendingTxHash(hash);
+        valueStr = units.toString();
       } else {
-        // Transfer ERC20 tokens directly to the vault address
-        const hash = await writeContractAsync({
-          address: vault.assetAddress,
-          abi: ERC20_ABI,
-          functionName: "transfer",
-          args: [vault.id as `0x${string}`, units],
+        // Build EIP-2612 permit for token and call contributeWithPermit
+        const tokenName =
+          (tokenNameRead.data as string | undefined) ?? vault.symbol;
+        const nonce = (noncesRead.data as bigint | undefined) ?? BigInt(0);
+        const deadlineSec = Math.floor(Date.now() / 1000) + 60 * 60; // +1h
+        const permitDomain = {
+          name: tokenName,
+          version: "1",
+          chainId,
+          verifyingContract: vault.assetAddress as `0x${string}`,
+        } as const;
+        const permitTypes = {
+          Permit: [
+            { name: "owner", type: "address" },
+            { name: "spender", type: "address" },
+            { name: "value", type: "uint256" },
+            { name: "nonce", type: "uint256" },
+            { name: "deadline", type: "uint256" },
+          ],
+        } as const;
+        const permitMessage = {
+          owner: address as `0x${string}`,
+          spender: vault.id as `0x${string}`,
+          value: units,
+          nonce,
+          deadline: BigInt(deadlineSec),
+        } as const;
+        const sig = await signTypedDataAsync({
+          domain: permitDomain,
+          types: permitTypes,
+          primaryType: "Permit",
+          message: permitMessage,
         });
-        setPendingTxHash(hash);
+        const r = `0x${sig.slice(2, 66)}` as `0x${string}`;
+        const s = `0x${sig.slice(66, 130)}` as `0x${string}`;
+        let v = parseInt(sig.slice(130, 132), 16);
+        if (v < 27) v += 27;
+
+        data = encodeFunctionData({
+          abi: VAULT_ABI as Abi,
+          functionName: "contributeWithPermit",
+          args: [units, BigInt(permitMessage.deadline), v, r, s],
+        });
       }
+
+      const prepRes = await fetch("/api/metatx/prepare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: address,
+          to: vault.id,
+          data,
+          value: valueStr,
+          gas: "2000000",
+        }),
+      });
+      if (!prepRes.ok) throw new Error("Failed to prepare meta-tx");
+      const { request, domain, types } = await prepRes.json();
+
+      const signature = await signTypedDataAsync({
+        domain,
+        types,
+        primaryType: "ForwardRequest",
+        message: request,
+      });
+
+      const submitRes = await fetch("/api/metatx/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ request, signature }),
+      });
+      if (!submitRes.ok) throw new Error("Failed to submit meta-tx");
     } catch (err) {
       const msg =
         (err as Error)?.message || "Something went wrong. Please try again.";
@@ -181,10 +274,9 @@ export default function VaultDetailPage() {
 
   // When add funds tx confirms, refresh reads and close modal
   React.useEffect(() => {
-    if (!waitAddFunds.isSuccess) return;
+    if (!isSubmitting && !isSubmittingMeta) return;
     setIsAddFundsOpen(false);
     setAddAmount("");
-    setPendingTxHash(undefined);
     push({
       intent: "success",
       title: "Funds added",
@@ -203,7 +295,7 @@ export default function VaultDetailPage() {
         /* ignore */
       }
     })();
-  }, [waitAddFunds.isSuccess, vaultBalanceRead, canWithdrawRead]);
+  }, [isSubmitting, isSubmittingMeta, vaultBalanceRead, canWithdrawRead, push]);
 
   const goalUnits = vault?.goalUsd ?? 0;
   const liveBalUnits = React.useMemo(() => {
@@ -312,12 +404,38 @@ export default function VaultDetailPage() {
                 type="button"
                 onClick={async () => {
                   try {
-                    await writeContractAsync({
-                      address: vault.id as `0x${string}`,
-                      abi: VAULT_ABI,
+                    const data = encodeFunctionData({
+                      abi: VAULT_ABI as Abi,
                       functionName: "withdraw",
                       args: [],
                     });
+                    const prepRes = await fetch("/api/metatx/prepare", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        from: address,
+                        to: vault.id,
+                        data,
+                        value: "0",
+                        gas: "1200000",
+                      }),
+                    });
+                    if (!prepRes.ok)
+                      throw new Error("Failed to prepare meta-tx");
+                    const { request, domain, types } = await prepRes.json();
+                    const signature = await signTypedDataAsync({
+                      domain,
+                      types,
+                      primaryType: "ForwardRequest",
+                      message: request,
+                    });
+                    const submitRes = await fetch("/api/metatx/submit", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ request, signature }),
+                    });
+                    if (!submitRes.ok)
+                      throw new Error("Failed to submit meta-tx");
                     const cw = canWithdrawRead as unknown as {
                       refetch?: () => Promise<unknown>;
                     };

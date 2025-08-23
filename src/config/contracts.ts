@@ -1,5 +1,6 @@
 import VaultFactoryArtifact from "./contracts/VaultFactory.json";
 import VaultArtifact from "./contracts/Vault.json";
+import ERC2771ForwarderArtifact from "./contracts/ERC2771Forwarder.json";
 import PointsTokenArtifact from "./contracts/PointsToken.json";
 import AdminMinterLeaderboardArtifact from "./contracts/AdminMinterLeaderboard.json";
 import type { Abi } from "viem";
@@ -11,6 +12,8 @@ export const VAULT_FACTORY_ADDRESS = (process.env
 export const VAULT_FACTORY_ABI = VaultFactoryArtifact.abi as Abi;
 export const VAULT_ABI = VaultArtifact.abi as Abi;
 
+export const FORWARDER_ABI = ERC2771ForwarderArtifact.abi as Abi;
+
 // Points / AdminMinterLeaderboard
 export const POINTS_TOKEN_ADDRESS = (process.env
   .NEXT_PUBLIC_POINTS_TOKEN_ADDRESS || "") as `0x${string}`;
@@ -20,57 +23,8 @@ export const AML_ADDRESS = (process.env.NEXT_PUBLIC_AML_ADDRESS ||
 export const POINTS_TOKEN_ABI = PointsTokenArtifact.abi as Abi;
 export const AML_ABI = AdminMinterLeaderboardArtifact.abi as Abi;
 
-// Minimal ERC20 ABI bits that we might need
-export const ERC20_ABI = [
-  {
-    type: "function",
-    name: "decimals",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "uint8" }],
-  },
-  {
-    type: "function",
-    name: "symbol",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "string" }],
-  },
-  {
-    type: "function",
-    name: "balanceOf",
-    stateMutability: "view",
-    inputs: [{ name: "account", type: "address" }],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "allowance",
-    stateMutability: "view",
-    inputs: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-    ],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "approve",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ type: "bool" }],
-  },
-  {
-    type: "function",
-    name: "transfer",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ type: "bool" }],
-  },
-] as const;
+export const SERVER_WALLET_ADDRESS = (process.env
+  .NEXT_PUBLIC_SERVER_WALLET_ADDRESS || "") as `0x${string}`;
+
+export const FORWARDER_ADDRESS = (process.env.NEXT_PUBLIC_FORWARDER_ADDRESS ||
+  "") as `0x${string}`;

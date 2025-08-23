@@ -17,7 +17,7 @@ import type {
   UiVault,
 } from "@/lib/types";
 import { useAccount, useBalance, useReadContracts } from "wagmi";
-import { VAULT_ABI, ERC20_ABI } from "@/config/contracts";
+import { erc20Abi } from "viem";
 import { ERC20_TOKENS, TOKEN_USD_PRICE } from "@/config/tokens";
 
 type AsyncState<T> = {
@@ -124,7 +124,7 @@ export function usePortfolio() {
   const erc20Balances = useReadContracts({
     contracts: ERC20_TOKENS.map((t) => ({
       address: t.address,
-      abi: ERC20_ABI,
+      abi: erc20Abi,
       functionName: "balanceOf" as const,
       args: [address as `0x${string}`],
     })),

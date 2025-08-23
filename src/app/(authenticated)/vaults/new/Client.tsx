@@ -7,17 +7,13 @@ import {
   useBalance,
   useReadContract,
   useReadContracts,
-  useWaitForTransactionReceipt,
-  useWriteContract,
+  useSignTypedData,
 } from "wagmi";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  ERC20_ABI,
-  VAULT_FACTORY_ABI,
-  VAULT_FACTORY_ADDRESS,
-} from "@/config/contracts";
+import { VAULT_FACTORY_ABI, VAULT_FACTORY_ADDRESS } from "@/config/contracts";
 import { ERC20_TOKENS } from "@/config/tokens";
+import { Abi, encodeFunctionData, erc20Abi } from "viem";
 
 // Probe known ERC-20s from config; only show those with positive balances
 
@@ -30,23 +26,17 @@ export default function CreateVaultClient() {
   const erc20BalanceReads = useReadContracts({
     contracts: ERC20_TOKENS.map((t) => ({
       address: t.address,
-      abi: ERC20_ABI,
+      abi: erc20Abi,
       functionName: "balanceOf" as const,
       args: [address as `0x${string}`],
     })),
     query: { enabled: Boolean(address) },
     allowFailure: true,
   });
-  const {
-    writeContractAsync,
-    data: txHash,
-    isPending,
-    error: writeError,
-  } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
-    hash: txHash,
-  });
+  const { signTypedDataAsync } = useSignTypedData();
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isSubmitted, setIsSubmitted] = React.useState(false);
 
   const [assetAddress, setAssetAddress] = React.useState<string>("");
   const [goal, setGoal] = React.useState<string>("");
@@ -168,40 +158,60 @@ export default function CreateVaultClient() {
       return;
     }
     try {
+      setIsSubmitting(true);
       // Snapshot pre-existing vaults for this creator
       preVaultsRef.current =
         (creatorVaults.data as `0x${string}`[] | undefined) ?? [];
       const goalUnits = parseUnits(goal, decimals);
-      if (isNative) {
-        await writeContractAsync({
-          address: VAULT_FACTORY_ADDRESS,
-          abi: VAULT_FACTORY_ABI,
-          functionName: "createVaultNative",
-          args: [goalUnits, name || "My Vault"],
-          gas: parseUnits("5000000", 0),
-        });
-      } else {
-        const asset = assetAddress as `0x${string}`;
-        if (!asset) {
-          setFormError("Select a token");
-          return;
-        }
-        await writeContractAsync({
-          address: VAULT_FACTORY_ADDRESS,
-          abi: VAULT_FACTORY_ABI,
-          functionName: "createVaultERC20",
-          args: [asset, goalUnits, name || "My Vault"],
-          gas: parseUnits("5000000", 0),
-        });
-      }
+      const fn = isNative ? "createVaultNative" : "createVaultERC20";
+      const args = isNative
+        ? [goalUnits, name || "My Vault"]
+        : [assetAddress as `0x${string}`, goalUnits, name || "My Vault"];
+
+      const data = encodeFunctionData({
+        abi: VAULT_FACTORY_ABI as Abi,
+        functionName: fn as "createVaultNative" | "createVaultERC20",
+        args: args as readonly unknown[],
+      });
+
+      const prepRes = await fetch("/api/metatx/prepare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: address,
+          to: VAULT_FACTORY_ADDRESS,
+          data,
+          value: "0",
+          gas: "3000000",
+        }),
+      });
+      if (!prepRes.ok) throw new Error("Failed to prepare meta-tx");
+      const { request, domain, types } = await prepRes.json();
+
+      const signature = await signTypedDataAsync({
+        domain,
+        types,
+        primaryType: "ForwardRequest",
+        message: request,
+      });
+
+      const submitRes = await fetch("/api/metatx/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ request, signature }),
+      });
+      if (!submitRes.ok) throw new Error("Failed to submit meta-tx");
+      setIsSubmitted(true);
     } catch (err) {
       const message = (err as Error).message || "Failed to submit transaction";
       setFormError(message);
+      setIsSubmitting(false);
+      return;
     }
   }
 
   React.useEffect(() => {
-    if (!isSuccess || didPersistRef.current) return;
+    if (!isSubmitted || didPersistRef.current) return;
     // After confirmation, refetch creator's vaults, diff to get the new address, persist to DB, then navigate
     (async () => {
       try {
@@ -214,8 +224,15 @@ export default function CreateVaultClient() {
           | `0x${string}`[]
           | undefined;
         if (refetch) {
-          const res = await refetch();
-          after = (res?.data ?? after) as `0x${string}`[] | undefined;
+          // Poll a few times to allow the chain indexer to update
+          for (let i = 0; i < 5; i++) {
+            const res = await refetch();
+            after = (res?.data ?? after) as `0x${string}`[] | undefined;
+            const beforeSet = new Set(preVaultsRef.current);
+            const newAddress = (after ?? []).find((a) => !beforeSet.has(a));
+            if (newAddress) break;
+            await new Promise((r) => setTimeout(r, 1200));
+          }
         }
         const beforeSet = new Set(preVaultsRef.current);
         const newAddress = (after ?? []).find((a) => !beforeSet.has(a));
@@ -233,11 +250,12 @@ export default function CreateVaultClient() {
       } catch {
         // ignore errors, still navigate
       } finally {
+        setIsSubmitting(false);
         router.push("/vaults");
       }
     })();
   }, [
-    isSuccess,
+    isSubmitted,
     router,
     address,
     name,
@@ -352,24 +370,18 @@ export default function CreateVaultClient() {
         {formError ? (
           <div className="mt-2 text-xs text-red-400">{formError}</div>
         ) : null}
-        {writeError ? (
-          <div className="mt-2 text-xs text-red-400">
-            {String(writeError.message)}
-          </div>
-        ) : null}
+        {/* error surface handled via formError above */}
 
         <div className="mt-5">
           <button
             type="submit"
-            disabled={isPending || isConfirming}
+            disabled={isSubmitting}
             className="w-[362px] inline-flex items-center justify-center px-3 py-2 rounded-lg bg-[#2dd4bf] hover:brightness-110 text-[black] font-medium disabled:opacity-60"
           >
             {isAddingShared
               ? "Add shared vault"
-              : isPending
-              ? "Confirm in wallet…"
-              : isConfirming
-              ? "Waiting for confirmation…"
+              : isSubmitting
+              ? "Confirm signature…"
               : "Add vault"}
           </button>
         </div>

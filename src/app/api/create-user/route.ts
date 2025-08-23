@@ -1,12 +1,13 @@
 import z from 'zod';
 import Stripe from 'stripe';
 import { eq } from 'drizzle-orm';
-import { isAddress } from 'viem';
+import { Address, isAddress } from 'viem';
 import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { cards, users } from '@/db/schema';
+import { fundUserWithUsdcVia0x } from '@/lib/swap';
 
 const STRIPE_API_VERSION = '2025-07-30.basil';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -170,6 +171,12 @@ export async function POST(req: NextRequest) {
       secure: true,
       path: '/',
       maxAge: COOKIE_MAX_AGE,
+    });
+
+    // After user creation: 0x swap with our server wallet + fund user wallet
+    // tODO only send if they have les than 1 usdc in wallet
+    fundUserWithUsdcVia0x(user.address as Address).catch((err) => {
+      console.error('[create-user] Swap/send USDC failed:', err);
     });
 
     return res;
