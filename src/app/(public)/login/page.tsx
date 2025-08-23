@@ -44,8 +44,7 @@ export default function LoginPage() {
           </h1>
           <p className="text-white/70 text-base leading-relaxed max-w-[34ch] mx-auto">
             Monad Pay makes it easy to spend your crypto balance anywhere that
-            accepts VISA. Earn points as you pay, save for goals, and spend
-            around the world. All self-custodial. Your keys, your crypto.
+            accepts VISA. Your keys, your crypto.
           </p>
         </div>
 
