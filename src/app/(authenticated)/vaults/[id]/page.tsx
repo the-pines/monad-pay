@@ -3,7 +3,7 @@
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { UiVault } from "@/lib/types";
-import VaultGraph from "@/components/feature/Vaults/VaultGraph";
+import ProgressCircle from "@/components/ui/ProgressCircle";
 import { useUserBalanceUSD, useVaults } from "@/hooks";
 import {
   ArrowLeftIcon,
@@ -15,14 +15,17 @@ import {
   useBalance,
   useReadContract,
   useWriteContract,
+  useWaitForTransactionReceipt,
 } from "wagmi";
 import { parseUnits } from "viem";
 import { VAULT_ABI } from "@/config/contracts";
 
 function formatToken(amount: number, symbol?: string): string {
   const s = symbol || "";
+  const abs = Math.abs(amount);
+  const maximumFractionDigits = abs < 1 ? 3 : abs < 10 ? 2 : 0;
   return `${amount.toLocaleString(undefined, {
-    maximumFractionDigits: 0,
+    maximumFractionDigits,
   })} ${s}`.trim();
 }
 
@@ -81,6 +84,44 @@ export default function VaultDetailPage() {
     return String(vault.id);
   }, [vault]);
 
+  // Live vault reads for balance & withdraw state
+  const vaultBalanceRead = useReadContract({
+    address: (vault?.id ??
+      "0x0000000000000000000000000000000000000000") as `0x${string}`,
+    abi: VAULT_ABI,
+    functionName: "assetBalance",
+    query: {
+      enabled: Boolean(vault?.id),
+    },
+  });
+
+  const canWithdrawRead = useReadContract({
+    address: (vault?.id ??
+      "0x0000000000000000000000000000000000000000") as `0x${string}`,
+    abi: VAULT_ABI,
+    functionName: "canWithdraw",
+    query: {
+      enabled: Boolean(vault?.id),
+    },
+  });
+
+  const [pendingTxHash, setPendingTxHash] = React.useState<
+    `0x${string}` | undefined
+  >(undefined);
+  const waitAddFunds = useWaitForTransactionReceipt({ hash: pendingTxHash });
+  const prevCanWithdraw = React.useRef<boolean>(false);
+  const [isCelebrating, setIsCelebrating] = React.useState(false);
+  const [toastMsg, setToastMsg] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    const canW = Boolean(canWithdrawRead.data);
+    if (!prevCanWithdraw.current && canW) {
+      setIsCelebrating(true);
+      const t = setTimeout(() => setIsCelebrating(false), 2200);
+      return () => clearTimeout(t);
+    }
+    prevCanWithdraw.current = canW;
+  }, [canWithdrawRead.data, canWithdrawRead]);
+
   async function handleCopy() {
     if (!copyValue) return;
     try {
@@ -111,24 +152,24 @@ export default function VaultDetailPage() {
       const units = parseUnits(String(amount), vault.decimals);
       if (vault.isNative) {
         // Send native MON to the vault via contributeNative
-        await writeContractAsync({
+        const hash = await writeContractAsync({
           address: vault.id as `0x${string}`,
           abi: VAULT_ABI,
           functionName: "contributeNative",
           args: [],
           value: units,
         });
+        setPendingTxHash(hash);
       } else {
         // Transfer ERC20 tokens directly to the vault address
-        await writeContractAsync({
+        const hash = await writeContractAsync({
           address: vault.assetAddress,
           abi: ERC20_ABI,
           functionName: "transfer",
           args: [vault.id as `0x${string}`, units],
         });
+        setPendingTxHash(hash);
       }
-      setIsAddFundsOpen(false);
-      setAddAmount("");
     } catch (err) {
       const msg =
         (err as Error)?.message || "Something went wrong. Please try again.";
@@ -137,6 +178,36 @@ export default function VaultDetailPage() {
       setIsSubmitting(false);
     }
   }
+
+  // When add funds tx confirms, refresh reads and close modal
+  React.useEffect(() => {
+    if (!waitAddFunds.isSuccess) return;
+    setIsAddFundsOpen(false);
+    setAddAmount("");
+    setPendingTxHash(undefined);
+    (async () => {
+      try {
+        const vb = vaultBalanceRead as unknown as {
+          refetch?: () => Promise<unknown>;
+        };
+        const cw = canWithdrawRead as unknown as {
+          refetch?: () => Promise<unknown>;
+        };
+        await Promise.all([vb.refetch?.(), cw.refetch?.()]);
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [waitAddFunds.isSuccess, vaultBalanceRead, canWithdrawRead]);
+
+  const goalUnits = vault?.goalUsd ?? 0;
+  const liveBalUnits = React.useMemo(() => {
+    const d = vault?.decimals ?? 18;
+    const raw = (vaultBalanceRead.data as bigint | undefined) ?? BigInt(0);
+    return Number(raw) / 10 ** d;
+  }, [vaultBalanceRead.data, vault?.decimals]);
+  const progress = goalUnits > 0 ? Math.min(1, liveBalUnits / goalUnits) : 0;
+  const progressPct = Math.round(progress * 100);
 
   if (loading && !vault) {
     return <div className="p-4">Loading…</div>;
@@ -158,11 +229,11 @@ export default function VaultDetailPage() {
     );
   }
 
-  const changePctLabel = `${Math.round((vault.changePct ?? 0) * 100)}%`;
-
   return (
-    <div className="flex flex-col text-xl items-start w-[393px] mx-auto">
-      <div className="flex flex-col items-start w-full bg-[#200052] p-4">
+    <div className="flex flex-col text-xl items-start w-[393px] mx-auto min-h-screen relative">
+      <div className="pointer-events-none absolute inset-0 opacity-[0.03] [background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%22.9%22 numOctaves=%222%22 stitchTiles=%22stitch%22/></filter><rect width=%22100%%22 height=%22100%%22 filter=%22url(%23n)%22/></svg>')]" />
+
+      <div className="flex flex-col items-start w-full bg-[#200052] p-4 relative z-10">
         <button
           type="button"
           onClick={() => router.back()}
@@ -176,17 +247,16 @@ export default function VaultDetailPage() {
           {vault.name}
         </h1>
         <div className="mt-4">
-          <span className="text-[18px] font-bold leading-[23px] text-[#836EF9]">
-            {changePctLabel}
-          </span>
+          <ProgressCircle
+            value={progress}
+            size={160}
+            thickness={16}
+            label={`${progressPct}%`}
+          />
         </div>
       </div>
 
-      <div className="w-full bg-[#200052]">
-        <VaultGraph vault={vault} />
-      </div>
-
-      <div className="w-full bg-[#200052] px-4 pb-4">
+      <div className="w-full bg-[#200052] px-4 pb-4 relative z-10">
         <div className="mt-3 w-[362px]">
           <div className="flex gap-3">
             <div className="w-[175px] h-[80px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-start justify-center p-3">
@@ -195,7 +265,7 @@ export default function VaultDetailPage() {
                 className="text-[17px] font-bold leading-[22px]"
                 style={{ color: "#8A76F9" }}
               >
-                {formatToken(vault.balanceUsd, vault.symbol)}
+                {formatToken(liveBalUnits, vault.symbol)}
               </div>
             </div>
             <div className="w-[175px] h-[80px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-start justify-center p-3">
@@ -216,6 +286,56 @@ export default function VaultDetailPage() {
             >
               Add funds
             </button>
+            {Boolean(canWithdrawRead.data) ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await writeContractAsync({
+                      address: vault.id as `0x${string}`,
+                      abi: VAULT_ABI,
+                      functionName: "withdraw",
+                      args: [],
+                    });
+                    const cw = canWithdrawRead as unknown as {
+                      refetch?: () => Promise<unknown>;
+                    };
+                    const vb = vaultBalanceRead as unknown as {
+                      refetch?: () => Promise<unknown>;
+                    };
+                    await cw.refetch?.();
+                    await vb.refetch?.();
+                    // Show toast and remove from DB
+                    const withdrawnAmount = liveBalUnits; // approximate just-before refresh
+                    setToastMsg(
+                      `Withdrawn! ${formatToken(
+                        withdrawnAmount,
+                        vault.symbol
+                      )} has been funded to your wallet`
+                    );
+                    setTimeout(() => setToastMsg(null), 1800);
+                    try {
+                      await fetch("/api/vaults", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          creator: address,
+                          vaultAddress: vault.id,
+                        }),
+                      });
+                    } catch {}
+                    // Optional: navigate back after a brief delay
+                    setTimeout(() => router.push("/vaults"), 1200);
+                  } catch {
+                    /* ignore */
+                  }
+                }}
+                className="mt-2 w-full inline-flex items-center justify-center px-3 py-2 rounded-lg bg-gradient-to-r from-[#6e58ff] via-[#bba9ff] to-[#6e58ff] text-[#1a003d] font-semibold relative overflow-hidden group"
+              >
+                <span className="relative z-10">Withdraw</span>
+                <span className="absolute inset-0 translate-x-[-100%] bg-white/40 mix-blend-overlay group-hover:translate-x-[100%] transition-transform duration-700" />
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -289,6 +409,87 @@ export default function VaultDetailPage() {
               </button>
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {isCelebrating ? (
+        <div className="pointer-events-none fixed inset-0 z-40">
+          {Array.from({ length: 14 }).map((_, i) => (
+            <span
+              key={i}
+              className="absolute w-2 h-3 rounded-sm"
+              style={{
+                left: `${(i * 7) % 100}%`,
+                top: `-10%`,
+                background:
+                  i % 3 === 0 ? "#a48bff" : i % 3 === 1 ? "#ff83d1" : "#7ef9a7",
+                animation: `drop ${1 + (i % 5) * 0.12}s ease-in ${
+                  i * 0.05
+                }s forwards`,
+                transform: `rotate(${(i * 47) % 360}deg)`,
+              }}
+            />
+          ))}
+          <style jsx>{`
+            @keyframes drop {
+              0% {
+                transform: translateY(-10vh) rotate(0deg);
+                opacity: 0;
+              }
+              10% {
+                opacity: 1;
+              }
+              100% {
+                transform: translateY(110vh) rotate(360deg);
+                opacity: 0;
+              }
+            }
+          `}</style>
+        </div>
+      ) : null}
+
+      {toastMsg ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="relative w-[320px] max-w-[90vw] rounded-2xl bg-[#1A003F]/95 p-4 text-center border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,.45)] animate-[fadepop_.18s_ease-out_both]">
+            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-white/10">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M20 12c0 4.418-3.582 8-8 8s-8-3.582-8-8 3.582-8 8-8 8 3.582 8 8Z"
+                  fill="#BBA9FF"
+                  fillOpacity="0.25"
+                />
+                <path
+                  d="M9.5 12.5l2 2 4-4"
+                  stroke="#BBA9FF"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <div className="text-[14px] font-medium text-[#FBFAF9]">
+              {toastMsg}
+            </div>
+          </div>
+          <style jsx>{`
+            @keyframes fadepop {
+              from {
+                opacity: 0;
+                transform: translateY(4px) scale(0.98);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+              }
+            }
+          `}</style>
         </div>
       ) : null}
     </div>

@@ -16,13 +16,9 @@ import type {
   UiTransaction,
   UiVault,
 } from "@/lib/types";
-import { useAccount, useReadContract, useReadContracts } from "wagmi";
-import {
-  VAULT_FACTORY_ABI,
-  VAULT_FACTORY_ADDRESS,
-  VAULT_ABI,
-  ERC20_ABI,
-} from "@/config/contracts";
+import { useAccount, useBalance, useReadContracts } from "wagmi";
+import { VAULT_ABI, ERC20_ABI } from "@/config/contracts";
+import { ERC20_TOKENS, TOKEN_USD_PRICE } from "@/config/tokens";
 
 type AsyncState<T> = {
   data: T | null;
@@ -82,21 +78,29 @@ export function useVirtualCardDisplay() {
 
 export function useVaults() {
   const { address } = useAccount();
-  const hasFactory = Boolean(VAULT_FACTORY_ADDRESS);
-  const enabled = Boolean(address && hasFactory);
+  const enabled = Boolean(address);
 
-  const creatorVaults = useReadContract({
-    address: VAULT_FACTORY_ADDRESS as `0x${string}`,
-    abi: VAULT_FACTORY_ABI,
-    functionName: "getCreatorVaults",
-    args: [address as `0x${string}`],
-    query: { enabled },
-  });
+  // Fetch vault addresses from our DB-backed API by user address
+  const dbVaultAddresses = useAsync<`0x${string}`[]>(async () => {
+    if (!address) return [];
+    const res = await fetch(
+      `/api/vaults?address=${encodeURIComponent(address)}`,
+      {
+        cache: "no-store",
+      }
+    );
+    if (!res.ok) return [];
+    const arr = (await res.json()) as string[];
+    return arr as `0x${string}`[];
+  }, [address]);
 
-  const vaultAddresses = React.useMemo(
-    () => (creatorVaults.data as `0x${string}`[] | undefined) ?? [],
-    [creatorVaults.data]
-  );
+  const vaultAddresses = React.useMemo(() => {
+    const arr = (dbVaultAddresses.data as `0x${string}`[] | null) ?? [];
+    // De-duplicate in case of accidental double inserts or API glitches
+    return Array.from(
+      new Set(arr.map((a) => a.toLowerCase()))
+    ) as `0x${string}`[];
+  }, [dbVaultAddresses.data]);
 
   const vaultMetaReads = useReadContracts({
     contracts: vaultAddresses.length
@@ -173,7 +177,7 @@ export function useVaults() {
   });
 
   const loading =
-    creatorVaults.isLoading ||
+    dbVaultAddresses.loading ||
     vaultMetaReads.isLoading ||
     decimalsReads.isLoading;
 
@@ -248,5 +252,78 @@ export function useVaults() {
   return React.useMemo(
     () => ({ data, loading, error: null as Error | null }),
     [data, loading]
+  );
+}
+
+export type UiTokenHolding = {
+  symbol: string;
+  name: string;
+  decimals: number;
+  amount: number; // token units
+  amountUsd: number; // converted using TOKEN_USD_PRICE
+};
+
+export function usePortfolio() {
+  const { address } = useAccount();
+  const enabled = Boolean(address);
+
+  const native = useBalance({ address, query: { enabled } });
+
+  const erc20Balances = useReadContracts({
+    contracts: ERC20_TOKENS.map((t) => ({
+      address: t.address,
+      abi: ERC20_ABI,
+      functionName: "balanceOf" as const,
+      args: [address as `0x${string}`],
+    })),
+    query: { enabled },
+    allowFailure: true,
+  });
+
+  const loading = native.isLoading || erc20Balances.isLoading;
+
+  const data: UiTokenHolding[] = React.useMemo(() => {
+    if (!address) return [];
+    const holdings: UiTokenHolding[] = [];
+
+    const monAmount = Number(native.data?.value ?? BigInt(0)) / 1e18;
+    if (monAmount > 0) {
+      const price = TOKEN_USD_PRICE["MON"] ?? 0;
+      holdings.push({
+        symbol: "MON",
+        name: "Monad",
+        decimals: 18,
+        amount: monAmount,
+        amountUsd: monAmount * price,
+      });
+    }
+
+    const balances = erc20Balances.data ?? [];
+    ERC20_TOKENS.forEach((t, idx) => {
+      const balRaw = (balances[idx]?.result as bigint | undefined) ?? BigInt(0);
+      const amount = Number(balRaw) / 10 ** t.decimals;
+      if (amount > 0) {
+        const price = TOKEN_USD_PRICE[t.symbol] ?? 0;
+        holdings.push({
+          symbol: t.symbol,
+          name: t.name,
+          decimals: t.decimals,
+          amount,
+          amountUsd: amount * price,
+        });
+      }
+    });
+
+    return holdings;
+  }, [address, native.data?.value, erc20Balances.data]);
+
+  const totalUsd = React.useMemo(
+    () => data.reduce((sum, h) => sum + h.amountUsd, 0),
+    [data]
+  );
+
+  return React.useMemo(
+    () => ({ data, totalUsd, loading, error: null as Error | null }),
+    [data, totalUsd, loading]
   );
 }

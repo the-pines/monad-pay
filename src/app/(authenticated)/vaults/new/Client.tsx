@@ -5,6 +5,7 @@ import { parseUnits } from "viem";
 import {
   useAccount,
   useBalance,
+  useReadContract,
   useReadContracts,
   useWaitForTransactionReceipt,
   useWriteContract,
@@ -127,6 +128,18 @@ export default function CreateVaultClient() {
     }
   }, [tokenOptions]);
 
+  // Track creator's existing vaults from factory to diff after creation
+  const creatorVaults = useReadContract({
+    address: VAULT_FACTORY_ADDRESS,
+    abi: VAULT_FACTORY_ABI,
+    functionName: "getCreatorVaults",
+    args: [address as `0x${string}`],
+    query: { enabled: Boolean(address && VAULT_FACTORY_ADDRESS) },
+  });
+  const preVaultsRef = React.useRef<`0x${string}`[]>([]);
+  // Prevent duplicate persistence in dev/StrictMode double effects
+  const didPersistRef = React.useRef<boolean>(false);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
@@ -144,6 +157,9 @@ export default function CreateVaultClient() {
       return;
     }
     try {
+      // Snapshot pre-existing vaults for this creator
+      preVaultsRef.current =
+        (creatorVaults.data as `0x${string}`[] | undefined) ?? [];
       const goalUnits = parseUnits(goal, decimals);
       if (isNative) {
         await writeContractAsync({
@@ -174,20 +190,51 @@ export default function CreateVaultClient() {
   }
 
   React.useEffect(() => {
-    if (!isSuccess) return;
-    // Optimistically persist and navigate back to list
-    fetch("/api/vaults", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: name || "My Vault",
-        asset: assetAddress,
-        goal,
-        decimals,
-        creator: address,
-      }),
-    }).finally(() => router.push("/vaults"));
-  }, [isSuccess, router, address, name, assetAddress, goal, decimals]);
+    if (!isSuccess || didPersistRef.current) return;
+    // After confirmation, refetch creator's vaults, diff to get the new address, persist to DB, then navigate
+    (async () => {
+      try {
+        const refetch = (
+          creatorVaults as unknown as {
+            refetch?: () => Promise<{ data?: `0x${string}`[] }>;
+          }
+        ).refetch;
+        let after: `0x${string}`[] | undefined = creatorVaults.data as
+          | `0x${string}`[]
+          | undefined;
+        if (refetch) {
+          const res = await refetch();
+          after = (res?.data ?? after) as `0x${string}`[] | undefined;
+        }
+        const beforeSet = new Set(preVaultsRef.current);
+        const newAddress = (after ?? []).find((a) => !beforeSet.has(a));
+        if (address && newAddress) {
+          didPersistRef.current = true;
+          await fetch("/api/vaults", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              creator: address,
+              vaultAddress: newAddress,
+            }),
+          });
+        }
+      } catch {
+        // ignore errors, still navigate
+      } finally {
+        router.push("/vaults");
+      }
+    })();
+  }, [
+    isSuccess,
+    router,
+    address,
+    name,
+    assetAddress,
+    goal,
+    decimals,
+    creatorVaults,
+  ]);
 
   return (
     <div className="flex flex-col text-xl items-start w-[393px] mx-auto">
@@ -199,9 +246,7 @@ export default function CreateVaultClient() {
           >
             <span aria-hidden>←</span>
           </Link>
-          <h1 className="text-xl font-semibold text-[#FBFAF9]">
-            Create a Vault
-          </h1>
+          <h1 className="text-xl font-semibold text-[#FBFAF9]">Add a Vault</h1>
         </div>
       </div>
 

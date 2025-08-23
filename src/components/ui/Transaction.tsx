@@ -31,14 +31,19 @@ export default function Transaction({
       maximumFractionDigits: 2,
     });
 
+  const accentBg = direction === "in" ? "bg-[#1DE9B6]/25" : "bg-[#FF5CAA]/25"; // turquoise / pink with slight opacity
+  const accentIcon = direction === "in" ? "text-[#1DE9B6]" : "text-[#FF5CAA]";
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left rounded-3xl bg-white/5 hover:bg-white/10 active:bg-white/15 transition-colors px-4 py-3 flex items-center gap-3"
+      className={`w-full text-left rounded-3xl bg-white/5 hover:bg-white/10 active:bg-white/15 transition-colors px-4 py-3 flex items-center gap-3 soft-shadow`}
     >
-      <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15">
-        <Icon className="h-6 w-6 text-[--foreground]" />
+      <span
+        className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${accentBg}`}
+      >
+        <Icon className={`h-6 w-6 ${accentIcon}`} />
       </span>
 
       <div className="min-w-0 flex-1">

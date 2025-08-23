@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useVaults } from "@/hooks";
 import type { UiVault } from "@/lib/types";
 import VaultCard from "@/components/ui/Vault";
-import VaultGraph from "./VaultGraph";
+import ProgressCircle from "@/components/ui/ProgressCircle";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
 
 const SectionHeader: React.FC<{ title: string; subtitle?: string }> = ({
@@ -40,10 +40,9 @@ const Vaults: React.FC<{
         {vaults.map((v) => (
           <VaultCard key={v.id} vault={v} onSelect={onSelect} />
         ))}
-
         <Link
           href="/vaults/new"
-          className="relative w-[175px] h-[167px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-center justify-center gap-2 text-center hover:bg-[rgba(251,250,249,0.1)] cursor-pointer"
+          className="relative w-[175px] h-[167px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-center justify-center gap-2 text-center hover:bg-[rgba(251,250,249,0.1)] cursor-pointer order-last"
           aria-label="Create new vault"
         >
           <PlusCircleIcon
@@ -60,6 +59,7 @@ const Vaults: React.FC<{
 const VaultsPage: React.FC = () => {
   const { data, loading } = useVaults();
   const vaults: UiVault[] = React.useMemo(() => data ?? [], [data]);
+  // Removed fallback graph state per new design (no graph)
   const aggregateVault = React.useMemo<UiVault | null>(() => {
     if (!vaults.length) return null;
     const totalsByTimestamp = new Map<string, number>();
@@ -95,6 +95,13 @@ const VaultsPage: React.FC = () => {
     };
   }, [vaults]);
 
+  const progress = React.useMemo(() => {
+    if (!aggregateVault) return 0;
+    const goal = aggregateVault.goalUsd || 0;
+    const bal = aggregateVault.balanceUsd || 0;
+    return goal > 0 ? Math.min(1, bal / goal) : 0;
+  }, [aggregateVault]);
+
   if (loading && !vaults.length) {
     return <div className="p-4">Loading…</div>;
   }
@@ -102,13 +109,21 @@ const VaultsPage: React.FC = () => {
   const changePctLabel = aggregateVault
     ? `${Math.round(aggregateVault.changePct * 100)}%`
     : "";
+
   return (
     <div className="flex flex-col text-xl items-start w-[393px] mx-auto">
       <SectionHeader title={"Vaults"} subtitle={changePctLabel} />
 
-      <div className="w-full px-0">
-        {aggregateVault ? <VaultGraph vault={aggregateVault} /> : null}
-      </div>
+      {aggregateVault ? (
+        <div className="w-full px-0 flex justify-center py-4">
+          <ProgressCircle
+            value={progress}
+            size={180}
+            thickness={16}
+            label={`${Math.round(progress * 100)}%`}
+          />
+        </div>
+      ) : null}
 
       <Vaults
         vaults={vaults}

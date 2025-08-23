@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 :root {
   --background: #200052;
@@ -21,5 +21,104 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Subtle reusable shadow for elevated surfaces */
+.soft-shadow {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* ---------------------------
+   Dramatic shimmer/glisten
+   --------------------------- */
+
+@keyframes card-shimmer {
+  0% {
+    transform: translateX(-150%) skewX(20deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 0.5;
+  }
+  60% {
+    opacity: 0.5;
+  }
+  90% {
+    opacity: 0.25;
+  }
+  100% {
+    transform: translateX(150%) skewX(20deg);
+    opacity: 0;
+  }
+}
+
+.virtual-card {
+  position: relative;
+  overflow: hidden; /* ensures shimmer is clipped */
+  border-radius: 1rem; /* adjust to match your card design */
+  will-change: transform;
+  isolation: isolate; /* keeps shimmer contained */
+}
+
+/* Static soft highlight for depth */
+.virtual-card::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit; /* inherit rounded corners */
+  background: radial-gradient(
+    120% 80% at 0% 0%,
+    rgba(255, 255, 255, 0.08),
+    transparent 65%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Moving shimmer streak */
+.virtual-card::after {
+  content: "";
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -60%;
+  width: 75%;
+  border-radius: inherit; /* shimmer respects corners */
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  filter: blur(1px);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 1;
+
+  /* Loop shimmer every 3s */
+  animation: card-shimmer 3s ease-in-out infinite;
+}
+
+/* Accessibility: disable for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .virtual-card::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* Tiny wiggle animation for points button */
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: translateZ(0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translateZ(0) rotate(-0.6deg) scale(1.008);
+  }
 }
