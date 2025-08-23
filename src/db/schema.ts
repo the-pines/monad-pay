@@ -9,11 +9,15 @@ import {
   numeric,
   timestamp,
   uniqueIndex,
+  char,
 } from 'drizzle-orm/pg-core';
 
 export const providerE         = pgEnum('provider_e', ['gmail', 'apple', 'wallet']); // prettier-ignore
 export const cardStatusE       = pgEnum('card_status_e', ['active', 'inactive', 'deleted']); // prettier-ignore
 export const paymentStatusE    = pgEnum('payment_status_e', ['started', 'completed', 'cancelled']); // prettier-ignore
+
+export type User = typeof users.$inferSelect;
+export type Card = typeof cards.$inferSelect;
 
 // prettier-ignore
 export const users = pgTable('users', {
@@ -52,6 +56,8 @@ export const cards = pgTable('cards', {
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'set null' }),
   stripeCardId: text('stripe_card_id').notNull(),
   stripeCardHolderId: text('stripe_cardholder_id').notNull(),
+  brand: text('brand').notNull(),
+  last4: char('last_4').notNull(),
   status: cardStatusE('status').notNull(),
   spendingLimit: numeric('spending_limit', { precision: 20, scale: 2 }).notNull().default('0.00'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
