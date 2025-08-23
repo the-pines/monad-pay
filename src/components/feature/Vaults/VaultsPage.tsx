@@ -38,7 +38,7 @@ const SectionHeader: React.FC<{ title: string; subtitle?: string }> = ({
 // (legacy section list component removed)
 
 const VaultsPage: React.FC = () => {
-  const { data } = useVaults();
+  const { data, loading } = useVaults();
   const vaults: UiVault[] = React.useMemo(() => data ?? [], [data]);
   // Removed fallback graph state per new design (no graph)
   const aggregateVault = React.useMemo<UiVault | null>(() => {

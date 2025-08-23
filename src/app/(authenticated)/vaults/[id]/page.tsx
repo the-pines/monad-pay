@@ -26,7 +26,7 @@ import { useToastContext } from "@/contexts/ToastContext";
 export default function VaultDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const { data: vaults } = useVaults();
+  const { data: vaults, loading } = useVaults();
   const { isConnected, address } = useAccount();
   const { writeContractAsync } = useWriteContract();
   const { data: balanceUsd } = useUserBalanceUSD();
@@ -203,7 +203,7 @@ export default function VaultDetailPage() {
         /* ignore */
       }
     })();
-  }, [waitAddFunds.isSuccess, vaultBalanceRead, canWithdrawRead, push]);
+  }, [waitAddFunds.isSuccess, vaultBalanceRead, canWithdrawRead]);
 
   const goalUnits = vault?.goalUsd ?? 0;
   const liveBalUnits = React.useMemo(() => {
