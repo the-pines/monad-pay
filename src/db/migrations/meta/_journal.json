@@ -29,6 +29,20 @@
       "when": 1755921520655,
       "tag": "0003_normal_norrin_radd",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1755924518597,
+      "tag": "0004_rare_pride",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1755927076024,
+      "tag": "0005_light_amphibian",
+      "breakpoints": true
     }
   ]
 }

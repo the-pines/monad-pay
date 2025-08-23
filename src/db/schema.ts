@@ -53,11 +53,11 @@ export const transfers = pgTable('transfers', {
 // prettier-ignore
 export const cards = pgTable('cards', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'set null' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   stripeCardId: text('stripe_card_id').notNull(),
   stripeCardHolderId: text('stripe_cardholder_id').notNull(),
   brand: text('brand').notNull(),
-  last4: char('last_4').notNull(),
+  last4: char('last_4', {length: 4}).notNull(),
   status: cardStatusE('status').notNull(),
   spendingLimit: numeric('spending_limit', { precision: 20, scale: 2 }).notNull().default('0.00'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -69,7 +69,7 @@ export const cards = pgTable('cards', {
 // prettier-ignore
 export const payments = pgTable('payments', {
   id: uuid('id').primaryKey().defaultRandom(),
-  cardId: uuid('card_id').notNull().references(() => cards.id, { onDelete: 'set null' }),
+  cardId: uuid('card_id').notNull().references(() => cards.id, { onDelete: 'cascade' }),
   orderId: text('order_id').notNull(),
   entity: text('entity').notNull(), // commerce name
   currency: text('currency').notNull(), // USD, ARS, MEX, EUR, etc
@@ -84,7 +84,7 @@ export const payments = pgTable('payments', {
 // prettier-ignore
 export const executions = pgTable('executions', {
   id: uuid('id').primaryKey().defaultRandom(),
-  paymentId: uuid('payment_id').notNull().references(() => payments.id, { onDelete: 'set null' }),
+  paymentId: uuid('payment_id').notNull().references(() => payments.id, { onDelete: 'cascade' }),
   symbol: text('symbol').notNull(),
   amount: numeric('amount', { precision: 78, scale: 0 }).notNull(),
   decimals: integer('decimals').notNull(),
@@ -99,7 +99,7 @@ export const executions = pgTable('executions', {
 // prettier-ignore
 export const vaults = pgTable('vaults', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'set null' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   collaborators: text('collaborators').array().notNull().default(sql`ARRAY[]::text[]`),
   address: text('address').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
