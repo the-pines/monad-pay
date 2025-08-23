@@ -1,10 +1,12 @@
-import { sql } from "drizzle-orm";
+import { sql } from 'drizzle-orm';
 import {
   text,
   uuid,
+  index,
   pgEnum,
   integer,
   pgTable,
+  numeric,
   timestamp,
   uniqueIndex,
   numeric,

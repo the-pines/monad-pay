@@ -84,8 +84,12 @@
           "name": "cards_user_id_users_id_fk",
           "tableFrom": "cards",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -189,8 +193,12 @@
           "name": "executions_payment_id_payments_id_fk",
           "tableFrom": "executions",
           "tableTo": "payments",
-          "columnsFrom": ["payment_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "payment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -287,8 +295,12 @@
           "name": "payments_card_id_cards_id_fk",
           "tableFrom": "payments",
           "tableTo": "cards",
-          "columnsFrom": ["card_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "card_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -404,8 +416,12 @@
           "name": "transfers_user_id_users_id_fk",
           "tableFrom": "transfers",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -512,17 +528,29 @@
     "public.card_status_e": {
       "name": "card_status_e",
       "schema": "public",
-      "values": ["active", "inactive", "deleted"]
+      "values": [
+        "active",
+        "inactive",
+        "deleted"
+      ]
     },
     "public.payment_status_e": {
       "name": "payment_status_e",
       "schema": "public",
-      "values": ["started", "completed", "cancelled"]
+      "values": [
+        "started",
+        "completed",
+        "cancelled"
+      ]
     },
     "public.provider_e": {
       "name": "provider_e",
       "schema": "public",
-      "values": ["gmail", "apple", "wallet"]
+      "values": [
+        "gmail",
+        "apple",
+        "wallet"
+      ]
     }
   },
   "schemas": {},

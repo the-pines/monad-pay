@@ -8,6 +8,10 @@ import { users } from '@/db/schema';
 export const dynamic = 'force-dynamic';
 
 const CreateUserSchema = z.object({
+  name: z
+    .string()
+    .min(1)
+    .transform((s) => s.trim()),
   address: z
     .string()
     .min(1)
@@ -27,13 +31,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const { address, provider } = parsed.data;
+    const { name, address, provider } = parsed.data;
     const normalizedAddress = address.toLowerCase();
 
     // if the address already exists, do nothing.
     const inserted = await db
       .insert(users)
-      .values({ address: normalizedAddress, provider })
+      .values({ name, address: normalizedAddress, provider })
       .onConflictDoNothing({ target: users.address })
       .returning();
 
@@ -54,7 +58,7 @@ export async function POST(req: Request) {
       { status: 200 }
     );
   } catch (err) {
-    console.error('[POST /api/users] error:', err);
+    console.error('[POST /api/create-user] error:', err);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

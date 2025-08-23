@@ -50,7 +50,11 @@ const AuthContext: React.FC<AuthContextProps> = ({ children }) => {
     fetch('/api/create-user', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ address: addr, provider: 'wallet' }),
+      body: JSON.stringify({
+        name: 'Catherine Presas',
+        address: addr,
+        provider: 'wallet',
+      }),
     })
       .then(() => {
         try {
