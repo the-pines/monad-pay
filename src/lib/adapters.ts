@@ -1,4 +1,4 @@
-import type { DbPayment, DbTransfer, UiTransaction } from "./types";
+import type { DbPayment, UiTransaction } from "./types";
 
 export function mapPaymentToUiTransaction(payment: DbPayment): UiTransaction {
   const amountPrimary = safeParseNumber(payment.amount);
@@ -11,28 +11,6 @@ export function mapPaymentToUiTransaction(payment: DbPayment): UiTransaction {
     amountUsd,
     direction: amountPrimary >= 0 ? "out" : "in",
     datetime: payment.createdAt,
-  };
-}
-
-export function mapTransferToUiTransaction(
-  transfer: DbTransfer,
-  currentAddress: string
-): UiTransaction {
-  const amountUsd = convertTokenAmountToFloat(
-    transfer.amount,
-    transfer.decimals
-  );
-  const isOutgoing =
-    transfer.sender.toLowerCase() === currentAddress.toLowerCase();
-  return {
-    id: transfer.id,
-    title: isOutgoing
-      ? `Sent ${transfer.symbol}`
-      : `Received ${transfer.symbol}`,
-    amountPrimary: 0, // unknown fiat conversion for now
-    amountUsd,
-    direction: isOutgoing ? "out" : "in",
-    datetime: transfer.createdAt,
   };
 }
 

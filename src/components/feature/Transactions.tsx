@@ -8,7 +8,6 @@ import type { UiTransaction } from "@/lib/types";
 type GroupedDay = {
   dayKey: string; // YYYY-MM-DD
   dateLabel: string; // e.g. "13 dec. 2023"
-  totalAmount: number;
   items: Array<UiTransaction>;
 };
 
@@ -35,7 +34,6 @@ function formatMonthLabel(date: Date): string {
   const label = date.toLocaleString(undefined, {
     month: "long",
     year: "numeric",
-    timeZone: "UTC",
   });
   return label;
 }
@@ -45,7 +43,6 @@ function formatDayLabel(date: Date): string {
     day: "numeric",
     month: "short",
     year: "numeric",
-    timeZone: "UTC",
   }).format(date);
   return label.toLocaleLowerCase();
 }
@@ -55,7 +52,6 @@ function formatTime(date: Date): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: "UTC",
   }).format(date);
 }
 
@@ -97,10 +93,6 @@ function groupTransactionsByMonthAndDay(
       const days: GroupedDay[] = Object.entries(byDay)
         .sort((a, b) => b[1].date.getTime() - a[1].date.getTime())
         .map(([dayKey, group]) => {
-          const total = group.items.reduce(
-            (acc, t) => acc + t.amountPrimary,
-            0
-          );
           // sort items by most recent time
           const sortedItems = [...group.items].sort(
             (a, b) =>
@@ -109,7 +101,6 @@ function groupTransactionsByMonthAndDay(
           return {
             dayKey,
             dateLabel: formatDayLabel(group.date),
-            totalAmount: total,
             items: sortedItems,
           };
         });
@@ -130,7 +121,7 @@ export default function Transactions() {
   );
   const monthsScrollRef = React.useRef<HTMLDivElement | null>(null);
 
-  const { data } = useUserTransactions();
+  const { data, loading } = useUserTransactions();
   const grouped = React.useMemo(
     () => groupTransactionsByMonthAndDay(data ?? []),
     [data]
@@ -149,12 +140,6 @@ export default function Transactions() {
     el.scrollTo({ left: el.scrollWidth, behavior: "auto" });
   }, [grouped.length, selectedMonthKey]);
 
-  const formatNumber = (value: number) =>
-    value.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-
   const selectedMonth =
     grouped.find((m) => m.monthKey === selectedMonthKey) ??
     grouped[grouped.length - 1];
@@ -162,7 +147,7 @@ export default function Transactions() {
   return (
     <section className="px-4 py-2">
       <h1 className="text-xl font-semibold mb-4">Transactions</h1>
-      {grouped.length === 0 ? (
+      {!loading && grouped.length === 0 ? (
         <div className="mt-6">
           <div className="rounded-3xl bg-white/5 border border-white/10 p-6 text-center soft-shadow">
             <div className="text-lg font-semibold">No transactions yet</div>
@@ -176,57 +161,92 @@ export default function Transactions() {
       <div className="sticky top-[104px] z-10 -mx-4 bg-[--background]">
         <div
           ref={monthsScrollRef}
-          className="px-4 py-3 flex items-center gap-3 overflow-x-auto"
+          className={`px-4 py-3 flex items-center gap-3 ${
+            loading ? "overflow-hidden" : "overflow-x-auto"
+          }`}
         >
-          {grouped.map((m) => (
-            <button
-              key={m.monthKey}
-              type="button"
-              onClick={() => setSelectedMonthKey(m.monthKey)}
-              className={
-                "shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors " +
-                (m.monthKey === selectedMonthKey
-                  ? "bg-white/15 text-[--foreground]"
-                  : "text-[--foreground]/70 hover:text-[--foreground]")
-              }
-            >
-              {m.monthLabel}
-            </button>
-          ))}
+          {loading ? (
+            <div className="flex items-center gap-3">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="h-8 w-24 shrink-0 rounded-full bg-white/10 animate-pulse"
+                  style={{ animationDelay: `${idx * 80}ms` }}
+                />
+              ))}
+            </div>
+          ) : (
+            grouped.map((m, idx) => (
+              <div
+                key={m.monthKey}
+                className="motion-safe:animate-[slideIn_260ms_ease-out_forwards] opacity-0"
+                style={{ animationDelay: `${idx * 40}ms` }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setSelectedMonthKey(m.monthKey)}
+                  className={
+                    "shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors " +
+                    (m.monthKey === selectedMonthKey
+                      ? "bg-white/15 text-[--foreground]"
+                      : "text-[--foreground]/70 hover:text-[--foreground]")
+                  }
+                >
+                  {m.monthLabel}
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
       {/* Scrollable list */}
       <div className="max-h-[calc(100dvh-180px)] overflow-y-auto pb-8">
-        {selectedMonth?.days.map((group) => (
-          <div key={group.dayKey} className="mt-4">
-            <div className="flex items-baseline justify-between mb-2">
-              <h3 className="text-[13px] tracking-wide uppercase text-[--foreground]/60">
-                {group.dateLabel}
-              </h3>
-              <span className="text-[13px] text-[--foreground]/60">
-                {`MXN ${formatNumber(group.totalAmount)}`}
-              </span>
-            </div>
-
+        {loading ? (
+          <div className="mt-4 space-y-4">
+            <div className="h-3 w-24 bg-white/10 rounded animate-pulse" />
             <div className="space-y-2">
-              {group.items.map((t) => {
-                const d = new Date(t.datetime);
-                return (
-                  <Transaction
-                    key={t.id}
-                    title={t.title}
-                    time={formatTime(d)}
-                    note={t.note}
-                    amountPrimary={t.amountPrimary}
-                    amountUsd={t.amountUsd}
-                    direction={t.direction}
-                  />
-                );
-              })}
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="h-[62px] rounded-3xl bg-[var(--card-surface)] border border-[var(--card-border)] soft-shadow animate-pulse"
+                  style={{ animationDelay: `${idx * 60}ms` }}
+                />
+              ))}
             </div>
           </div>
-        ))}
+        ) : (
+          selectedMonth?.days.map((group) => (
+            <div key={group.dayKey} className="mt-4">
+              <div className="flex items-baseline justify-between mb-2">
+                <h3 className="text-[13px] tracking-wide uppercase text-[--foreground]/60">
+                  {group.dateLabel}
+                </h3>
+              </div>
+
+              <div className="space-y-2">
+                {group.items.map((t, idx) => {
+                  const d = new Date(t.datetime);
+                  return (
+                    <div
+                      key={t.id}
+                      className="motion-safe:animate-[slideIn_280ms_ease-out_forwards] opacity-0"
+                      style={{ animationDelay: `${idx * 40}ms` }}
+                    >
+                      <Transaction
+                        title={t.title}
+                        time={formatTime(d)}
+                        amountPrimary={t.amountPrimary}
+                        amountUsd={t.amountUsd}
+                        direction={t.direction}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </section>
   );

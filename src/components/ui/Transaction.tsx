@@ -3,6 +3,7 @@ import Badge from "./Badge";
 import {
   ArrowDownLeftIcon,
   ArrowUpRightIcon,
+  HandThumbUpIcon,
 } from "@heroicons/react/24/outline";
 
 export type TransactionProps = {
@@ -24,7 +25,12 @@ export default function Transaction({
   direction,
   onClick,
 }: TransactionProps) {
-  const Icon = direction === "in" ? ArrowDownLeftIcon : ArrowUpRightIcon;
+  const isApproval = /\bapprov/i.test(title);
+  const Icon = isApproval
+    ? HandThumbUpIcon
+    : direction === "in"
+    ? ArrowDownLeftIcon
+    : ArrowUpRightIcon;
 
   const formatNumber = (value: number) =>
     value.toLocaleString(undefined, {
@@ -33,8 +39,16 @@ export default function Transaction({
       useGrouping: true,
     });
 
-  const accentBg = direction === "in" ? "bg-[#1DE9B6]/25" : "bg-[#FF5CAA]/25"; // turquoise / pink with slight opacity
-  const accentIcon = direction === "in" ? "text-[#1DE9B6]" : "text-[#FF5CAA]";
+  const accentBg = isApproval
+    ? "bg-blue-400/25"
+    : direction === "in"
+    ? "bg-[#1DE9B6]/25"
+    : "bg-[#FF5CAA]/25"; // turquoise / pink
+  const accentIcon = isApproval
+    ? "text-blue-300"
+    : direction === "in"
+    ? "text-[#1DE9B6]"
+    : "text-[#FF5CAA]";
 
   return (
     <button
@@ -53,9 +67,15 @@ export default function Transaction({
           <div className="truncate font-semibold text-[15px] leading-5 text-[--foreground]">
             {title}
           </div>
-          <Badge size="sm" intent={direction === "in" ? "success" : "danger"}>
-            {direction === "in" ? "Received" : "Sent"}
-          </Badge>
+          {isApproval ? (
+            <Badge size="sm" intent="info">
+              Approval
+            </Badge>
+          ) : (
+            <Badge size="sm" intent={direction === "in" ? "success" : "danger"}>
+              {direction === "in" ? "Received" : "Sent"}
+            </Badge>
+          )}
         </div>
         <div className="mt-0.5 text-xs text-[--foreground]/70">
           <span>{time}</span>
