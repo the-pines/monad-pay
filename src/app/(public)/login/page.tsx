@@ -1,43 +1,29 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useAppKit, useAppKitAccount } from "@reown/appkit/react";
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const [connecting, setConnecting] = useState(false);
 
   const { open } = useAppKit();
   const { address, isConnected } = useAppKitAccount();
-  const [connecting, setConnecting] = useState(false);
-  const resetTimerRef = useRef<number | null>(null);
 
   const connect = useCallback(async () => {
     setConnecting(true);
-    try {
-      await open();
-      if (resetTimerRef.current) window.clearTimeout(resetTimerRef.current);
-      resetTimerRef.current = window.setTimeout(
-        () => setConnecting(false),
-        20000
-      );
-    } catch {
+
+    open().finally(() => {
       setConnecting(false);
-    }
+    });
   }, [open]);
 
   useEffect(() => {
     if (!isConnected) return;
-    setConnecting(false);
-    router.replace("/");
+    router.replace('/');
   }, [router, address, isConnected]);
-
-  useEffect(() => {
-    return () => {
-      if (resetTimerRef.current) window.clearTimeout(resetTimerRef.current);
-    };
-  }, []);
 
   return (
     <main className="relative min-h-[100svh] overflow-hidden">
@@ -72,15 +58,14 @@ export default function LoginPage() {
             <button
               className="animated-gradient w-full rounded-3xl py-4 text-base font-semibold text-black/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-white/40 disabled:opacity-60"
               onClick={connect}
-              disabled={connecting}
-            >
+              disabled={connecting}>
               {connecting ? (
                 <span className="inline-flex items-center gap-2">
                   <span className="h-4 w-4 rounded-full border-2 border-black/30 border-t-black/70 animate-spin" />
                   Opening wallet...
                 </span>
               ) : (
-                "Connect Wallet"
+                'Connect Wallet'
               )}
             </button>
           </div>
