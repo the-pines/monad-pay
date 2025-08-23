@@ -1,9 +1,13 @@
-import Stripe from 'stripe';
-import { randomUUID } from 'crypto';
-import { NextResponse } from 'next/server';
-import z from 'zod';
+import Stripe from "stripe";
+import { randomUUID } from "crypto";
+import { NextResponse } from "next/server";
+import z from "zod";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {});
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
+  return new Stripe(key, {});
+}
 
 const BodySchema = z.object({
   name: z.string().min(1), // name shown on the card (stripe suggests max 24 chars)
@@ -22,7 +26,7 @@ const BodySchema = z.object({
       city: z.string().min(1),
       state: z.string().min(1),
       postal_code: z.string().min(1),
-      country: z.literal('GB').default('GB'), // ISO 3166-1 alpha-2
+      country: z.literal("GB").default("GB"), // ISO 3166-1 alpha-2
       line2: z.string().optional(),
     }),
   }),
@@ -37,11 +41,11 @@ export async function POST(req: Request) {
     const data = BodySchema.parse(body);
 
     const idempotencyKey =
-      req.headers.get('Idempotency-Key') ?? `ch_${randomUUID()}`;
+      req.headers.get("Idempotency-Key") ?? `ch_${randomUUID()}`;
 
     const params: Stripe.Issuing.CardholderCreateParams = {
-      type: 'individual',
-      status: 'active',
+      type: "individual",
+      status: "active",
       name: data.name,
       email: data.email,
       phone_number: data.phone_number,
@@ -67,15 +71,15 @@ export async function POST(req: Request) {
       metadata: data.metadata,
     };
 
-    const cardholder = await stripe.issuing.cardholders.create(params, {
+    const cardholder = await getStripe().issuing.cardholders.create(params, {
       idempotencyKey,
     });
 
     return NextResponse.json(cardholder, { status: 201 });
   } catch (err) {
-    console.error('[POST /api/create-cardholder] error:', err);
+    console.error("[POST /api/create-cardholder] error:", err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

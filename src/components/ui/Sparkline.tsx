@@ -19,6 +19,7 @@ export default function Sparkline({
   className,
   fillGradient = true,
 }: SparklineProps) {
+  const gradientId = React.useId();
   if (!points || points.length === 0) return null;
 
   const min = Math.min(...points);
@@ -35,8 +36,6 @@ export default function Sparkline({
     .join(" ");
 
   const fillPath = `${path} L ${width},${height} L 0,${height} Z`;
-
-  const gradientId = React.useId();
 
   return (
     <svg

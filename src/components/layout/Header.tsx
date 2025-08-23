@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Button } from "@/components/ui";
+import { PointsBadge } from "@/components/feature";
 import { UserIcon } from "@heroicons/react/24/outline";
 
 export default function Header() {
@@ -24,9 +24,7 @@ export default function Header() {
 
           <div className="flex items-center gap-2">
             <Link href="/points" aria-label="Points">
-              <Button size="md" className="animated-gradient text-black/90">
-                1275 Points ✨
-              </Button>
+              <PointsBadge />
             </Link>
             <Link
               href="/settings"

@@ -1,15 +1,19 @@
-import Stripe from 'stripe';
-import { randomUUID } from 'crypto';
-import { NextResponse } from 'next/server';
-import z from 'zod';
+import Stripe from "stripe";
+import { randomUUID } from "crypto";
+import { NextResponse } from "next/server";
+import z from "zod";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {});
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
+  return new Stripe(key, {});
+}
 
 const BodySchema = z.object({
   cardholderId: z.string().min(1), // ich_...
-  currency: z.string().default('gbp'),
+  currency: z.string().default("gbp"),
   activate: z.boolean().default(true),
   exp_month: z.number().int().min(1).max(12).optional(),
   exp_year: z.number().int().min(2000).max(2100).optional(),
@@ -22,26 +26,28 @@ export async function POST(req: Request) {
     const data = BodySchema.parse(body);
 
     const idempotencyKey =
-      req.headers.get('Idempotency-Key') ?? `vc_${randomUUID()}`;
+      req.headers.get("Idempotency-Key") ?? `vc_${randomUUID()}`;
 
     const params: Stripe.Issuing.CardCreateParams = {
       cardholder: data.cardholderId,
       currency: data.currency,
-      type: 'virtual',
-      status: data.activate ? 'active' : undefined,
+      type: "virtual",
+      status: data.activate ? "active" : undefined,
       ...(data.exp_month && data.exp_year
         ? { exp_month: data.exp_month, exp_year: data.exp_year }
         : {}),
       metadata: data.metadata,
     };
 
-    const card = await stripe.issuing.cards.create(params, { idempotencyKey });
+    const card = await getStripe().issuing.cards.create(params, {
+      idempotencyKey,
+    });
 
     return NextResponse.json(card, { status: 201 });
   } catch (err) {
-    console.error('[POST /api/create-card] error:', err);
+    console.error("[POST /api/create-card] error:", err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
