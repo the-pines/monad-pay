@@ -1,10 +1,11 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useVaults } from "@/hooks";
 import type { UiVault } from "@/lib/types";
 import VaultCard from "@/components/ui/Vault";
-import VaultGraph from "./VaultGraph";
+import ProgressCircle from "@/components/ui/ProgressCircle";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
 
 const SectionHeader: React.FC<{ title: string; subtitle?: string }> = ({
@@ -27,9 +28,6 @@ const Vaults: React.FC<{
   vaults: UiVault[];
   onSelect: (v: UiVault) => void;
 }> = ({ vaults, onSelect }) => {
-  const firstRow = vaults.slice(0, 2);
-  const secondRow = vaults.slice(2, 3);
-
   return (
     <div className="w-full bg-[#200052] pb-4">
       <div className="flex items-center px-4 pt-6">
@@ -38,28 +36,21 @@ const Vaults: React.FC<{
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 px-4 pt-1">
-        <div className="flex flex-row gap-3">
-          {firstRow.map((v) => (
-            <VaultCard key={v.id} vault={v} onSelect={onSelect} />
-          ))}
-        </div>
-
-        <div className="flex flex-row gap-3">
-          {secondRow.map((v) => (
-            <VaultCard key={v.id} vault={v} onSelect={onSelect} />
-          ))}
-
-          <div className="relative w-[175px] h-[167px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-center justify-center gap-2 text-center">
-            <PlusCircleIcon
-              className="w-8 h-8 text-[#836EF9]"
-              aria-hidden="true"
-            />
-            <span className="font-bold text-[17px] text-[#FBFAF9]">
-              Add new
-            </span>
-          </div>
-        </div>
+      <div className="flex flex-row flex-wrap gap-3 px-4 pt-1">
+        {vaults.map((v) => (
+          <VaultCard key={v.id} vault={v} onSelect={onSelect} />
+        ))}
+        <Link
+          href="/vaults/new"
+          className="relative w-[175px] h-[167px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-center justify-center gap-2 text-center hover:bg-[rgba(251,250,249,0.1)] cursor-pointer"
+          aria-label="Create new vault"
+        >
+          <PlusCircleIcon
+            className="w-8 h-8 text-[#836EF9]"
+            aria-hidden="true"
+          />
+          <span className="font-bold text-[17px] text-[#FBFAF9]">Add new</span>
+        </Link>
       </div>
     </div>
   );
@@ -68,6 +59,7 @@ const Vaults: React.FC<{
 const VaultsPage: React.FC = () => {
   const { data, loading } = useVaults();
   const vaults: UiVault[] = React.useMemo(() => data ?? [], [data]);
+  // Removed fallback graph state per new design (no graph)
   const aggregateVault = React.useMemo<UiVault | null>(() => {
     if (!vaults.length) return null;
     const totalsByTimestamp = new Map<string, number>();
@@ -91,6 +83,10 @@ const VaultsPage: React.FC = () => {
     return {
       id: "all",
       name: "Vaults",
+      symbol: "",
+      assetAddress:
+        "0x0000000000000000000000000000000000000000" as `0x${string}`,
+      decimals: 18,
       balanceUsd: last,
       goalUsd: totalGoalUsd,
       changeUsd,
@@ -99,25 +95,29 @@ const VaultsPage: React.FC = () => {
     };
   }, [vaults]);
 
+  const progress = React.useMemo(() => {
+    if (!aggregateVault) return 0;
+    const goal = aggregateVault.goalUsd || 0;
+    const bal = aggregateVault.balanceUsd || 0;
+    return goal > 0 ? Math.min(1, bal / goal) : 0;
+  }, [aggregateVault]);
+
   if (loading && !vaults.length) {
     return <div className="p-4">Loading…</div>;
   }
-
-  const changePctLabel = aggregateVault
-    ? `${Math.round(aggregateVault.changePct * 100)}%`
-    : "";
   return (
     <div className="flex flex-col text-xl items-start w-[393px] mx-auto">
-      <SectionHeader title={"Vaults"} subtitle={changePctLabel} />
+      <SectionHeader title={"Vaults"} />
 
-      <div className="w-full px-0">
-        {aggregateVault ? <VaultGraph vault={aggregateVault} /> : null}
-      </div>
+      {aggregateVault ? (
+        <div className="w-full px-0 flex justify-center py-4">
+          <ProgressCircle value={progress} size={180} thickness={16} />
+        </div>
+      ) : null}
 
       <Vaults
         vaults={vaults}
         onSelect={(v) => {
-          // navigate to detail page
           window.location.href = `/vaults/${v.id}`;
         }}
       />

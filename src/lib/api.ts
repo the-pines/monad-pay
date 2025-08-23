@@ -48,5 +48,13 @@ export async function fetchVirtualCardDisplay(): Promise<UiCardPublic> {
 }
 
 export async function fetchVaults(): Promise<UiVault[]> {
-  return delay(await dataSource.getVaults());
+  try {
+    const res = await fetch("/api/vaults", { cache: "no-store" });
+    if (res.ok) {
+      const json = (await res.json()) as UiVault[];
+      return delay(json);
+    }
+  } catch {
+    // fallback
+  }
 }

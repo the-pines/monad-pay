@@ -23,7 +23,7 @@ export default function RecentTransactions() {
 
   return (
     <div className="mt-6">
-      <h2 className="mb-3 text-[17px] leading-6 font-semibold text-[--foreground]">
+      <h2 className="mb-4 text-sm leading-6 font-medium tracking-wide text-[--foreground]/70">
         Recent transactions
       </h2>
       <div className="space-y-2">

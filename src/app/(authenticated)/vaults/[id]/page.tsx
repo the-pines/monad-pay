@@ -3,42 +3,131 @@
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { UiVault } from "@/lib/types";
-import VaultGraph from "@/components/feature/Vaults/VaultGraph";
+import ProgressCircle from "@/components/ui/ProgressCircle";
 import { useUserBalanceUSD, useVaults } from "@/hooks";
 import {
   ArrowLeftIcon,
   DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
+import { ERC20_ABI } from "@/config/contracts";
+import {
+  useAccount,
+  useBalance,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { parseUnits } from "viem";
+import { VAULT_ABI } from "@/config/contracts";
+import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
-function formatUsd(amount: number): string {
-  return `$${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+function formatToken(amount: number, symbol?: string): string {
+  const s = symbol || "";
+  const abs = Math.abs(amount);
+  const maximumFractionDigits = abs < 1 ? 3 : abs < 10 ? 2 : 0;
+  return `${amount.toLocaleString(undefined, {
+    maximumFractionDigits,
+  })} ${s}`.trim();
 }
 
 export default function VaultDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { data: vaults, loading } = useVaults();
+  const { isConnected, address } = useAccount();
+  const { writeContractAsync } = useWriteContract();
   const { data: balanceUsd } = useUserBalanceUSD();
   const [isAddFundsOpen, setIsAddFundsOpen] = React.useState(false);
   const [addAmount, setAddAmount] = React.useState<string>("");
   const [addError, setAddError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isSharedInfoOpen, setIsSharedInfoOpen] = React.useState(false);
 
   const vault = React.useMemo<UiVault | null>(() => {
     if (!vaults) return null;
     return vaults.find((v) => v.id === params.id) ?? null;
   }, [vaults, params.id]);
 
-  const shareUrl = React.useMemo(() => {
+  // Read user's balance depending on vault type
+  const erc20BalRead = useReadContract({
+    address: (vault?.assetAddress ??
+      "0x0000000000000000000000000000000000000000") as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [address as `0x${string}`],
+    query: {
+      enabled: Boolean(
+        vault && !vault.isNative && isConnected && address && vault.assetAddress
+      ),
+    },
+  });
+
+  const nativeBalRead = useBalance({
+    address,
+    query: {
+      enabled: Boolean(vault && vault.isNative && isConnected && address),
+    },
+  });
+
+  const userTokenBalance = React.useMemo(() => {
+    if (!vault) return 0;
+    if (vault.isNative) {
+      const raw = nativeBalRead.data?.value ?? BigInt(0);
+      return Number(raw) / 10 ** 18;
+    }
+    const raw = (erc20BalRead.data as bigint | undefined) ?? BigInt(0);
+    const d = vault.decimals ?? 18;
+    return Number(raw) / 10 ** d;
+  }, [vault, nativeBalRead.data, erc20BalRead.data]);
+
+  const copyValue = React.useMemo(() => {
     if (!vault) return "";
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    return `${origin}/vaults/${vault.id}`;
+    // Copy the contract address instead of a shareable link
+    return String(vault.id);
   }, [vault]);
 
+  // Live vault reads for balance & withdraw state
+  const vaultBalanceRead = useReadContract({
+    address: (vault?.id ??
+      "0x0000000000000000000000000000000000000000") as `0x${string}`,
+    abi: VAULT_ABI,
+    functionName: "assetBalance",
+    query: {
+      enabled: Boolean(vault?.id),
+    },
+  });
+
+  const canWithdrawRead = useReadContract({
+    address: (vault?.id ??
+      "0x0000000000000000000000000000000000000000") as `0x${string}`,
+    abi: VAULT_ABI,
+    functionName: "canWithdraw",
+    query: {
+      enabled: Boolean(vault?.id),
+    },
+  });
+
+  const [pendingTxHash, setPendingTxHash] = React.useState<
+    `0x${string}` | undefined
+  >(undefined);
+  const waitAddFunds = useWaitForTransactionReceipt({ hash: pendingTxHash });
+  const prevCanWithdraw = React.useRef<boolean>(false);
+  const [isCelebrating, setIsCelebrating] = React.useState(false);
+  const [toastMsg, setToastMsg] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    const canW = Boolean(canWithdrawRead.data);
+    if (!prevCanWithdraw.current && canW) {
+      setIsCelebrating(true);
+      const t = setTimeout(() => setIsCelebrating(false), 2200);
+      return () => clearTimeout(t);
+    }
+    prevCanWithdraw.current = canW;
+  }, [canWithdrawRead.data, canWithdrawRead]);
+
   async function handleCopy() {
-    if (!shareUrl) return;
+    if (!copyValue) return;
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(copyValue);
     } catch {
       // no-op for environments without clipboard permissions
     }
@@ -47,31 +136,80 @@ export default function VaultDetailPage() {
   async function handleConfirmAddFunds() {
     if (!vault) return;
     const amount = Number(addAmount);
-    const available = Number(balanceUsd ?? 0);
     if (!Number.isFinite(amount) || amount <= 0) {
       setAddError("Enter a valid amount");
       return;
     }
-    if (amount > available) {
-      setAddError("Amount exceeds available balance");
+    if (!isConnected) {
+      setAddError("Connect your wallet first");
+      return;
+    }
+    if (amount > userTokenBalance) {
+      setAddError(`Insufficient ${vault.symbol} balance`);
       return;
     }
     setAddError(null);
     setIsSubmitting(true);
     try {
-      await fetch(`/api/vaults/${vault.id}/fund`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amountUsd: amount, source: "balance" }),
-      });
-      setIsAddFundsOpen(false);
-      setAddAmount("");
-    } catch {
-      setAddError("Something went wrong. Please try again.");
+      const units = parseUnits(String(amount), vault.decimals);
+      if (vault.isNative) {
+        // Send native MON to the vault via contributeNative
+        const hash = await writeContractAsync({
+          address: vault.id as `0x${string}`,
+          abi: VAULT_ABI,
+          functionName: "contributeNative",
+          args: [],
+          value: units,
+        });
+        setPendingTxHash(hash);
+      } else {
+        // Transfer ERC20 tokens directly to the vault address
+        const hash = await writeContractAsync({
+          address: vault.assetAddress,
+          abi: ERC20_ABI,
+          functionName: "transfer",
+          args: [vault.id as `0x${string}`, units],
+        });
+        setPendingTxHash(hash);
+      }
+    } catch (err) {
+      const msg =
+        (err as Error)?.message || "Something went wrong. Please try again.";
+      setAddError(msg);
     } finally {
       setIsSubmitting(false);
     }
   }
+
+  // When add funds tx confirms, refresh reads and close modal
+  React.useEffect(() => {
+    if (!waitAddFunds.isSuccess) return;
+    setIsAddFundsOpen(false);
+    setAddAmount("");
+    setPendingTxHash(undefined);
+    (async () => {
+      try {
+        const vb = vaultBalanceRead as unknown as {
+          refetch?: () => Promise<unknown>;
+        };
+        const cw = canWithdrawRead as unknown as {
+          refetch?: () => Promise<unknown>;
+        };
+        await Promise.all([vb.refetch?.(), cw.refetch?.()]);
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [waitAddFunds.isSuccess, vaultBalanceRead, canWithdrawRead]);
+
+  const goalUnits = vault?.goalUsd ?? 0;
+  const liveBalUnits = React.useMemo(() => {
+    const d = vault?.decimals ?? 18;
+    const raw = (vaultBalanceRead.data as bigint | undefined) ?? BigInt(0);
+    return Number(raw) / 10 ** d;
+  }, [vaultBalanceRead.data, vault?.decimals]);
+  const progress = goalUnits > 0 ? Math.min(1, liveBalUnits / goalUnits) : 0;
+  const progressPct = Math.round(progress * 100);
 
   if (loading && !vault) {
     return <div className="p-4">Loading…</div>;
@@ -93,11 +231,11 @@ export default function VaultDetailPage() {
     );
   }
 
-  const changePctLabel = `${Math.round((vault.changePct ?? 0) * 100)}%`;
-
   return (
-    <div className="flex flex-col text-xl items-start w-[393px] mx-auto">
-      <div className="flex flex-col items-start w-full bg-[#200052] p-4">
+    <div className="flex flex-col text-xl items-start w-[393px] mx-auto min-h-screen relative">
+      <div className="pointer-events-none absolute inset-0 opacity-[0.03] [background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%22.9%22 numOctaves=%222%22 stitchTiles=%22stitch%22/></filter><rect width=%22100%%22 height=%22100%%22 filter=%22url(%23n)%22/></svg>')]" />
+
+      <div className="flex flex-col items-start w-full bg-[#200052] p-4 relative z-10">
         <button
           type="button"
           onClick={() => router.back()}
@@ -110,18 +248,38 @@ export default function VaultDetailPage() {
         <h1 className="text-xl font-semibold text-[#FBFAF9] mt-2">
           {vault.name}
         </h1>
+        {vault.isShared ? (
+          <div className="mt-2 inline-flex items-center gap-1 text-[12px] text-white/80 relative">
+            <span className="rounded-full bg-white/10 px-2 py-0.5">
+              SHARED WITH ME
+            </span>
+            <button
+              type="button"
+              aria-label="What does shared mean?"
+              className="ml-1 text-white/70 hover:text-white/90"
+              onClick={() => setIsSharedInfoOpen((v) => !v)}
+            >
+              <QuestionMarkCircleIcon className="w-4 h-4" aria-hidden="true" />
+            </button>
+            {isSharedInfoOpen ? (
+              <div className="absolute top-full mt-1 left-0 z-20 w-[220px] rounded-lg bg-[#1A003F] text-white/90 text-[11px] p-2 border border-white/10 shadow-lg">
+                You can contribute to this vault but only the owner can
+                withdraw.
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <div className="mt-4">
-          <span className="text-[18px] font-bold leading-[23px] text-[#836EF9]">
-            {changePctLabel}
-          </span>
+          <ProgressCircle
+            value={progress}
+            size={160}
+            thickness={16}
+            label={`${progressPct}%`}
+          />
         </div>
       </div>
 
-      <div className="w-full bg-[#200052]">
-        <VaultGraph vault={vault} />
-      </div>
-
-      <div className="w-full bg-[#200052] px-4 pb-4">
+      <div className="w-full bg-[#200052] px-4 pb-4 relative z-10">
         <div className="mt-3 w-[362px]">
           <div className="flex gap-3">
             <div className="w-[175px] h-[80px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-start justify-center p-3">
@@ -130,7 +288,7 @@ export default function VaultDetailPage() {
                 className="text-[17px] font-bold leading-[22px]"
                 style={{ color: "#8A76F9" }}
               >
-                {formatUsd(vault.balanceUsd)}
+                {formatToken(liveBalUnits, vault.symbol)}
               </div>
             </div>
             <div className="w-[175px] h-[80px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-start justify-center p-3">
@@ -139,7 +297,7 @@ export default function VaultDetailPage() {
                 className="text-[17px] font-bold leading-[22px]"
                 style={{ color: "#8A76F9" }}
               >
-                {formatUsd(vault.goalUsd)}
+                {formatToken(vault.goalUsd, vault.symbol)}
               </div>
             </div>
           </div>
@@ -151,6 +309,56 @@ export default function VaultDetailPage() {
             >
               Add funds
             </button>
+            {Boolean(canWithdrawRead.data) && !vault.isShared ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await writeContractAsync({
+                      address: vault.id as `0x${string}`,
+                      abi: VAULT_ABI,
+                      functionName: "withdraw",
+                      args: [],
+                    });
+                    const cw = canWithdrawRead as unknown as {
+                      refetch?: () => Promise<unknown>;
+                    };
+                    const vb = vaultBalanceRead as unknown as {
+                      refetch?: () => Promise<unknown>;
+                    };
+                    await cw.refetch?.();
+                    await vb.refetch?.();
+                    // Show toast and remove from DB
+                    const withdrawnAmount = liveBalUnits; // approximate just-before refresh
+                    setToastMsg(
+                      `Withdrawn! ${formatToken(
+                        withdrawnAmount,
+                        vault.symbol
+                      )} has been funded to your wallet`
+                    );
+                    setTimeout(() => setToastMsg(null), 1800);
+                    try {
+                      await fetch("/api/vaults", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          creator: address,
+                          vaultAddress: vault.id,
+                        }),
+                      });
+                    } catch {}
+                    // Optional: navigate back after a brief delay
+                    setTimeout(() => router.push("/vaults"), 1200);
+                  } catch {
+                    /* ignore */
+                  }
+                }}
+                className="mt-2 w-full inline-flex items-center justify-center px-3 py-2 rounded-lg bg-gradient-to-r from-[#6e58ff] via-[#bba9ff] to-[#6e58ff] text-[#1a003d] font-semibold relative overflow-hidden group"
+              >
+                <span className="relative z-10">Withdraw</span>
+                <span className="absolute inset-0 translate-x-[-100%] bg-white/40 mix-blend-overlay group-hover:translate-x-[100%] transition-transform duration-700" />
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -162,12 +370,12 @@ export default function VaultDetailPage() {
               className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[rgba(251,250,249,0.06)] hover:bg-[rgba(251,250,249,0.1)] text-[#FBFAF9] text-sm"
             >
               <DocumentDuplicateIcon className="w-4 h-4" aria-hidden="true" />
-              Copy shareable link
+              Copy contract address
             </button>
           </div>
           <div className="mt-2 text-[13px] text-white/60">
-            You can share this vault for others to contribute to. Only you can
-            withdraw when you hit the goal. Cool thing about smart contracts :)
+            Share your vault address so others can contribute. Only you can
+            withdraw when you hit the goal.
           </div>
         </div>
       </div>
@@ -179,14 +387,19 @@ export default function VaultDetailPage() {
               Add funds to {vault.name}
             </div>
             <div className="mt-2 text-sm text-white/70">
-              Available balance: {formatUsd(Number(balanceUsd ?? 0))}
+              Available balance:{" "}
+              {Number(balanceUsd ?? 0).toLocaleString(undefined, {
+                maximumFractionDigits: 0,
+              })}
             </div>
             <div className="mt-3">
-              <label className="block text-sm mb-1">Amount (USD)</label>
+              <label className="block text-sm mb-1">
+                Amount ({vault.symbol})
+              </label>
               <input
                 type="number"
                 min={0}
-                step={1}
+                step={"any"}
                 inputMode="decimal"
                 value={addAmount}
                 onChange={(e) => setAddAmount(e.target.value)}
@@ -219,6 +432,87 @@ export default function VaultDetailPage() {
               </button>
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {isCelebrating ? (
+        <div className="pointer-events-none fixed inset-0 z-40">
+          {Array.from({ length: 14 }).map((_, i) => (
+            <span
+              key={i}
+              className="absolute w-2 h-3 rounded-sm"
+              style={{
+                left: `${(i * 7) % 100}%`,
+                top: `-10%`,
+                background:
+                  i % 3 === 0 ? "#a48bff" : i % 3 === 1 ? "#ff83d1" : "#7ef9a7",
+                animation: `drop ${1 + (i % 5) * 0.12}s ease-in ${
+                  i * 0.05
+                }s forwards`,
+                transform: `rotate(${(i * 47) % 360}deg)`,
+              }}
+            />
+          ))}
+          <style jsx>{`
+            @keyframes drop {
+              0% {
+                transform: translateY(-10vh) rotate(0deg);
+                opacity: 0;
+              }
+              10% {
+                opacity: 1;
+              }
+              100% {
+                transform: translateY(110vh) rotate(360deg);
+                opacity: 0;
+              }
+            }
+          `}</style>
+        </div>
+      ) : null}
+
+      {toastMsg ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="relative w-[320px] max-w-[90vw] rounded-2xl bg-[#1A003F]/95 p-4 text-center border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,.45)] animate-[fadepop_.18s_ease-out_both]">
+            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-white/10">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M20 12c0 4.418-3.582 8-8 8s-8-3.582-8-8 3.582-8 8-8 8 3.582 8 8Z"
+                  fill="#BBA9FF"
+                  fillOpacity="0.25"
+                />
+                <path
+                  d="M9.5 12.5l2 2 4-4"
+                  stroke="#BBA9FF"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <div className="text-[14px] font-medium text-[#FBFAF9]">
+              {toastMsg}
+            </div>
+          </div>
+          <style jsx>{`
+            @keyframes fadepop {
+              from {
+                opacity: 0;
+                transform: translateY(4px) scale(0.98);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+              }
+            }
+          `}</style>
         </div>
       ) : null}
     </div>

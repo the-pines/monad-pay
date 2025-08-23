@@ -9,7 +9,9 @@ import {
   numeric,
   timestamp,
   uniqueIndex,
-} from 'drizzle-orm/pg-core';
+  numeric,
+  index,
+} from "drizzle-orm/pg-core";
 
 export const providerE         = pgEnum('provider_e', ['gmail', 'apple', 'wallet']); // prettier-ignore
 export const cardStatusE       = pgEnum('card_status_e', ['active', 'inactive', 'deleted']); // prettier-ignore
@@ -99,5 +101,6 @@ export const vaults = pgTable('vaults', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [
-  index("i_vault_user").on(t.userId)
+  index("i_vault_user").on(t.userId),
+  uniqueIndex("u_vault_user_address").on(t.userId, t.address)
 ]);
