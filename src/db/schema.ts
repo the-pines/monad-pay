@@ -1,12 +1,10 @@
-import { sql } from 'drizzle-orm';
+import { sql } from "drizzle-orm";
 import {
   text,
   uuid,
-  index,
   pgEnum,
   integer,
   pgTable,
-  numeric,
   timestamp,
   uniqueIndex,
   numeric,
@@ -101,6 +99,5 @@ export const vaults = pgTable('vaults', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [
-  index("i_vault_user").on(t.userId),
-  uniqueIndex("u_vault_user_address").on(t.userId, t.address)
+  index("i_vault_user").on(t.userId)
 ]);
