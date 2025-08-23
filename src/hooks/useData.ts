@@ -17,7 +17,7 @@ import type {
   UiVault,
 } from "@/lib/types";
 import { useAccount, useBalance, useReadContracts } from "wagmi";
-import { VAULT_ABI, ERC20_ABI } from "@/config/contracts";
+import { ERC20_ABI } from "@/config/contracts";
 import { ERC20_TOKENS, TOKEN_USD_PRICE } from "@/config/tokens";
 
 type AsyncState<T> = {

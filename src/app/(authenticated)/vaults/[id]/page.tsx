@@ -21,16 +21,16 @@ import { parseUnits } from "viem";
 import { VAULT_ABI } from "@/config/contracts";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { formatToken } from "@/lib/format";
-
-// moved to src/lib/format.ts
+import { useToastContext } from "@/contexts/ToastContext";
 
 export default function VaultDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const { data: vaults, loading } = useVaults();
+  const { data: vaults } = useVaults();
   const { isConnected, address } = useAccount();
   const { writeContractAsync } = useWriteContract();
   const { data: balanceUsd } = useUserBalanceUSD();
+  const { push } = useToastContext();
   const [isAddFundsOpen, setIsAddFundsOpen] = React.useState(false);
   const [addAmount, setAddAmount] = React.useState<string>("");
   const [addError, setAddError] = React.useState<string | null>(null);
@@ -107,7 +107,6 @@ export default function VaultDetailPage() {
   const waitAddFunds = useWaitForTransactionReceipt({ hash: pendingTxHash });
   const prevCanWithdraw = React.useRef<boolean>(false);
   const [isCelebrating, setIsCelebrating] = React.useState(false);
-  const [toastMsg, setToastMsg] = React.useState<string | null>(null);
   React.useEffect(() => {
     const canW = Boolean(canWithdrawRead.data);
     if (!prevCanWithdraw.current && canW) {
@@ -122,6 +121,11 @@ export default function VaultDetailPage() {
     if (!copyValue) return;
     try {
       await navigator.clipboard.writeText(copyValue);
+      push({
+        intent: "info",
+        title: "Copied",
+        description: "Vault address copied to clipboard",
+      });
     } catch {
       // no-op for environments without clipboard permissions
     }
@@ -181,6 +185,11 @@ export default function VaultDetailPage() {
     setIsAddFundsOpen(false);
     setAddAmount("");
     setPendingTxHash(undefined);
+    push({
+      intent: "success",
+      title: "Funds added",
+      description: "Your contribution was sent",
+    });
     (async () => {
       try {
         const vb = vaultBalanceRead as unknown as {
@@ -194,7 +203,7 @@ export default function VaultDetailPage() {
         /* ignore */
       }
     })();
-  }, [waitAddFunds.isSuccess, vaultBalanceRead, canWithdrawRead]);
+  }, [waitAddFunds.isSuccess, vaultBalanceRead, canWithdrawRead, push]);
 
   const goalUnits = vault?.goalUsd ?? 0;
   const liveBalUnits = React.useMemo(() => {
@@ -205,10 +214,6 @@ export default function VaultDetailPage() {
   const progress = goalUnits > 0 ? Math.min(1, liveBalUnits / goalUnits) : 0;
   const progressPct = Math.round(progress * 100);
 
-  if (loading && !vault) {
-    return <div className="p-4">Loading…</div>;
-  }
-
   if (!vault) {
     return (
       <div className="flex flex-col text-xl items-start w-[393px] mx-auto p-4">
@@ -218,7 +223,6 @@ export default function VaultDetailPage() {
           className="flex items-center gap-2 text-[#FBFAF9]"
         >
           <ArrowLeftIcon className="w-5 h-5" aria-hidden="true" />
-          Back
         </button>
         <div className="mt-4 text-white/70">Vault not found.</div>
       </div>
@@ -299,7 +303,7 @@ export default function VaultDetailPage() {
             <button
               type="button"
               onClick={() => setIsAddFundsOpen(true)}
-              className="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg bg-[#836EF9] hover:brightness-110 text-[#FBFAF9] font-medium"
+              className="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg bg-[#2dd4bf] hover:brightness-110 text-[#0B1B1B] font-medium"
             >
               Add funds
             </button>
@@ -324,13 +328,14 @@ export default function VaultDetailPage() {
                     await vb.refetch?.();
                     // Show toast and remove from DB
                     const withdrawnAmount = liveBalUnits; // approximate just-before refresh
-                    setToastMsg(
-                      `Withdrawn! ${formatToken(
+                    push({
+                      intent: "success",
+                      title: "Withdrawn",
+                      description: `${formatToken(
                         withdrawnAmount,
                         vault.symbol
-                      )} has been funded to your wallet`
-                    );
-                    setTimeout(() => setToastMsg(null), 1800);
+                      )} sent to your wallet`,
+                    });
                     try {
                       await fetch("/api/vaults", {
                         method: "DELETE",
@@ -347,10 +352,9 @@ export default function VaultDetailPage() {
                     /* ignore */
                   }
                 }}
-                className="mt-2 w-full inline-flex items-center justify-center px-3 py-2 rounded-lg bg-gradient-to-r from-[#6e58ff] via-[#bba9ff] to-[#6e58ff] font-semibold relative overflow-hidden group"
+                className="mt-2 w-full inline-flex items-center justify-center px-3 py-2 rounded-lg bg-[#2dd4bf] hover:brightness-110 text-[#0B1B1B] font-semibold"
               >
                 <span className="relative z-10">Withdraw</span>
-                <span className="absolute inset-0 translate-x-[-100%] bg-white/40 mix-blend-overlay group-hover:translate-x-[100%] transition-transform duration-700" />
               </button>
             ) : null}
           </div>
@@ -420,7 +424,7 @@ export default function VaultDetailPage() {
                 type="button"
                 onClick={handleConfirmAddFunds}
                 disabled={isSubmitting}
-                className="px-3 py-2 rounded-lg bg-[#836EF9] hover:brightness-110 disabled:opacity-60"
+                className="px-3 py-2 rounded-lg bg-[#2dd4bf] hover:brightness-110 disabled:opacity-60 text-[#0B1B1B]"
               >
                 {isSubmitting ? "Adding…" : "Confirm"}
               </button>
@@ -459,51 +463,6 @@ export default function VaultDetailPage() {
               100% {
                 transform: translateY(110vh) rotate(360deg);
                 opacity: 0;
-              }
-            }
-          `}</style>
-        </div>
-      ) : null}
-
-      {toastMsg ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" />
-          <div className="relative w-[320px] max-w-[90vw] rounded-2xl bg-[#1A003F]/95 p-4 text-center border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,.45)] animate-[fadepop_.18s_ease-out_both]">
-            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-white/10">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden
-              >
-                <path
-                  d="M20 12c0 4.418-3.582 8-8 8s-8-3.582-8-8 3.582-8 8-8 8 3.582 8 8Z"
-                  fill="#BBA9FF"
-                  fillOpacity="0.25"
-                />
-                <path
-                  d="M9.5 12.5l2 2 4-4"
-                  stroke="#BBA9FF"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-            <div className="text-[14px] font-medium text-[#FBFAF9]">
-              {toastMsg}
-            </div>
-          </div>
-          <style jsx>{`
-            @keyframes fadepop {
-              from {
-                opacity: 0;
-                transform: translateY(4px) scale(0.98);
-              }
-              to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
               }
             }
           `}</style>

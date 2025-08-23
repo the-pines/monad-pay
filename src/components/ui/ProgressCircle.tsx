@@ -8,6 +8,8 @@ export type ProgressCircleProps = {
   thickness?: number; // px of ring
   label?: string; // optional center label
   className?: string;
+  color?: string; // CSS color for progress
+  showPercent?: boolean;
 };
 
 const ProgressCircle: React.FC<ProgressCircleProps> = ({
@@ -16,8 +18,27 @@ const ProgressCircle: React.FC<ProgressCircleProps> = ({
   thickness = 14,
   label,
   className,
+  showPercent = true,
 }) => {
   const clamped = Math.max(0, Math.min(1, value || 0));
+  const [animated, setAnimated] = React.useState(0);
+
+  React.useEffect(() => {
+    // animate from current animated to clamped
+    const start = performance.now();
+    const from = animated;
+    const to = clamped;
+    const duration = 650;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out
+      const current = from + (to - from) * eased;
+      setAnimated(current);
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clamped]);
 
   // Mask to cut a donut shape out of a filled circle
   const ringMask = `radial-gradient(closest-side, transparent calc(50% - ${thickness}px), black calc(50% - ${
@@ -50,16 +71,25 @@ const ProgressCircle: React.FC<ProgressCircleProps> = ({
         className="absolute inset-0 rounded-full"
         style={{
           background:
-            "conic-gradient(from 0deg, #8f7cff 0turn, #cbbdff " +
-            clamped +
+            "conic-gradient(from 0deg, var(--pc-start, #7C5CFF) 0turn, var(--pc-end, #CBBDFE) " +
+            animated +
             "turn, transparent " +
-            clamped +
+            animated +
             "turn)",
           mask: ringMask,
           WebkitMask: ringMask,
           filter: "drop-shadow(0 4px 18px rgba(143,124,255,.35))",
         }}
       />
+
+      {/* Center label */}
+      {(label !== undefined || showPercent) && (
+        <div className="relative z-10 text-center select-none">
+          <div className="display text-sm font-semibold tabular-nums">
+            {label !== undefined ? label : `${Math.round(clamped * 100)}%`}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

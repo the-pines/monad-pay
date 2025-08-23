@@ -7,7 +7,6 @@ import {
   HomeIcon,
   ArrowsRightLeftIcon,
   CubeIcon,
-  Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
@@ -22,14 +21,13 @@ const navItems: NavItem[] = [
   { href: "/", label: "Home", Icon: HomeIcon },
   { href: "/transactions", label: "Transactions", Icon: ArrowsRightLeftIcon },
   { href: "/vaults", label: "Vaults", Icon: CubeIcon },
-  { href: "/settings", label: "Settings", Icon: Cog6ToothIcon },
 ];
 
 export default function Navigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#1A0A40]/75 backdrop-blur-md isolate pb-4 pb-[env(safe-area-inset-bottom)] soft-shadow">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#1A0A40] isolate pb-4 pb-[env(safe-area-inset-bottom)] soft-shadow">
       <div className="relative mx-auto max-w-[393px] h-12">
         <ul className="absolute left-0 top-1 w-[393px] h-12 flex flex-row items-start p-0">
           {navItems.map(({ href, label, Icon }) => {
@@ -38,7 +36,10 @@ export default function Navigation() {
             const labelColor = isActive ? "text-[#836EF9]" : "text-white/50";
             return (
               <li key={href} className="w-[98.25px] h-12 flex-none grow">
-                <Link href={href} className="relative block w-full h-full">
+                <Link
+                  href={href}
+                  className="relative block w-full h-full interactive-gradient"
+                >
                   <Icon
                     className={`${iconColor} w-6 h-6 absolute left-1/2 -translate-x-1/2 top-[4px]`}
                     strokeWidth={2}

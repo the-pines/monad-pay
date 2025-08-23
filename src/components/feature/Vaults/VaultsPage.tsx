@@ -7,57 +7,38 @@ import type { UiVault } from "@/lib/types";
 import VaultCard from "@/components/ui/Vault";
 import ProgressCircle from "@/components/ui/ProgressCircle";
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
+import { Card, Button } from "@/components/ui";
 
 const SectionHeader: React.FC<{ title: string; subtitle?: string }> = ({
   title,
   subtitle,
 }) => (
-  <div className="flex flex-col items-start w-full bg-[#200052] p-4">
-    <h1 className="text-xl font-semibold text-[#FBFAF9]">{title}</h1>
+  <div className="w-full px-4 pt-6 pb-4 relative">
+    {/* subtle radial wash */}
+    <div className="pointer-events-none absolute inset-0">
+      <div className="absolute -top-8 -left-10 h-40 w-56 rounded-full bg-white/5 blur-3xl" />
+    </div>
+
+    <h1 className="display-text text-2xl font-semibold text-[#FBFAF9] tracking-tight">
+      {title}
+    </h1>
     {subtitle ? (
-      <div className="mt-4">
-        <span className="text-[18px] font-bold leading-[23px] text-[#836EF9]">
+      <div className="mt-2">
+        <span className="display-text text-lg font-semibold bg-gradient-to-r from-[#8A76F9] to-[#b7a5ff] bg-clip-text text-transparent">
           {subtitle}
         </span>
       </div>
     ) : null}
+
+    {/* hairline divider */}
+    <div className="mt-4 h-px w-full bg-white/10" />
   </div>
 );
 
-const Vaults: React.FC<{
-  vaults: UiVault[];
-  onSelect: (v: UiVault) => void;
-}> = ({ vaults, onSelect }) => {
-  return (
-    <div className="w-full bg-[#200052] pb-4">
-      <div className="flex items-center px-4 pt-6">
-        <div className="text-[18px] font-bold leading-[23px] text-[#FBFAF9]">
-          All vaults
-        </div>
-      </div>
-
-      <div className="flex flex-row flex-wrap gap-3 px-4 pt-1">
-        {vaults.map((v) => (
-          <VaultCard key={v.id} vault={v} onSelect={onSelect} />
-        ))}
-        <Link
-          href="/vaults/new"
-          className="relative w-[175px] h-[167px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-center justify-center gap-2 text-center hover:bg-[rgba(251,250,249,0.1)] cursor-pointer"
-          aria-label="Create new vault"
-        >
-          <PlusCircleIcon
-            className="w-8 h-8 text-[#836EF9]"
-            aria-hidden="true"
-          />
-          <span className="font-bold text-[17px] text-[#FBFAF9]">Add new</span>
-        </Link>
-      </div>
-    </div>
-  );
-};
+// (legacy section list component removed)
 
 const VaultsPage: React.FC = () => {
-  const { data, loading } = useVaults();
+  const { data } = useVaults();
   const vaults: UiVault[] = React.useMemo(() => data ?? [], [data]);
   // Removed fallback graph state per new design (no graph)
   const aggregateVault = React.useMemo<UiVault | null>(() => {
@@ -76,7 +57,6 @@ const VaultsPage: React.FC = () => {
       valueUsd: totalsByTimestamp.get(ts) ?? 0,
     }));
     if (!history.length) return null;
-    const first = history[0].valueUsd;
     const last = history[history.length - 1].valueUsd;
     return {
       id: "all",
@@ -98,25 +78,83 @@ const VaultsPage: React.FC = () => {
     return goal > 0 ? Math.min(1, bal / goal) : 0;
   }, [aggregateVault]);
 
-  if (loading && !vaults.length) {
-    return <div className="p-4">Loading…</div>;
-  }
   return (
-    <div className="flex flex-col text-xl items-start w-[393px] mx-auto">
-      <SectionHeader title={"Vaults"} />
+    <div className="flex flex-col items-start w-[393px] mx-auto">
+      <SectionHeader title="Vaults" />
 
       {aggregateVault ? (
-        <div className="w-full px-0 flex justify-center py-4">
-          <ProgressCircle value={progress} size={180} thickness={16} />
+        <div className="w-full px-4">
+          <div className="w-full flex flex-col items-center py-6">
+            <ProgressCircle
+              value={progress}
+              size={180}
+              thickness={16}
+              className="[--pc-start:#8A76F9] [--pc-end:#B7A5FF]"
+            />
+            <div className="mt-3 max-w-[340px] text-center text-white/70 text-[13px]">
+              <span role="img" aria-label="lightbulb" className="mr-1">
+                💡
+              </span>
+              Vaults are goal-based savings addresses. Add funds and when you
+              reach your goal, you can withdraw. Share vaults with friends to
+              help you save.
+            </div>
+          </div>
         </div>
       ) : null}
 
-      <Vaults
-        vaults={vaults}
-        onSelect={(v) => {
-          window.location.href = `/vaults/${v.id}`;
-        }}
-      />
+      {!vaults || vaults.length === 0 ? (
+        <div className="px-4 py-8 w-full">
+          <Card className="w-full p-6 text-center">
+            <div className="display-text text-lg font-semibold">
+              No vaults yet
+            </div>
+            <div className="text-sm text-white/70 mt-1">
+              Create your first vault to start saving toward goals.
+            </div>
+            <div className="mt-4">
+              <Link href="/vaults/new">
+                <Button variant="primary">Create a vault</Button>
+              </Link>
+            </div>
+          </Card>
+        </div>
+      ) : null}
+
+      {/* All vaults */}
+      <div className="w-full px-4 pt-6">
+        <div className="display-text text-base font-semibold text-[#FBFAF9] mb-3">
+          All vaults
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {vaults.map((v) => (
+            <VaultCard
+              key={v.id}
+              vault={v}
+              onSelect={(v) => (window.location.href = `/vaults/${v.id}`)}
+            />
+          ))}
+
+          {/* Add new card – matches style */}
+          <Link
+            href="/vaults/new"
+            className="relative h-[167px] rounded-3xl bg-[var(--card-surface)] border border-[var(--card-border)] interactive-gradient
+                       hover:bg-[var(--card-surface-hover)] transition-colors soft-shadow
+                       flex flex-col items-center justify-center gap-2 text-center focus:outline-none
+                       focus:ring-2 focus:ring-[#8A76F9]/60"
+            aria-label="Create new vault"
+          >
+            <PlusCircleIcon
+              className="w-8 h-8 text-[#8A76F9]"
+              aria-hidden="true"
+            />
+            <span className="display-text font-semibold text-[15px] text-[#FBFAF9]">
+              Add new
+            </span>
+          </Link>
+        </div>
+      </div>
     </div>
   );
 };

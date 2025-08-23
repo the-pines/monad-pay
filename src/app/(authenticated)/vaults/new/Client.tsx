@@ -362,7 +362,7 @@ export default function CreateVaultClient() {
           <button
             type="submit"
             disabled={isPending || isConfirming}
-            className="w-[362px] inline-flex items-center justify-center px-3 py-2 rounded-lg bg-[#836EF9] hover:brightness-110 text-[#FBFAF9] font-medium disabled:opacity-60"
+            className="w-[362px] inline-flex items-center justify-center px-3 py-2 rounded-lg bg-[#2dd4bf] hover:brightness-110 text-[black] font-medium disabled:opacity-60"
           >
             {isAddingShared
               ? "Add shared vault"

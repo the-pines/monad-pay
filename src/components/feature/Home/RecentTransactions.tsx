@@ -27,18 +27,23 @@ export default function RecentTransactions() {
         Recent transactions
       </h2>
       <div className="space-y-2">
-        {latest3.map((t) => {
+        {latest3.map((t, idx) => {
           const d = new Date(t.datetime);
           return (
-            <Transaction
+            <div
               key={t.id}
-              title={t.title}
-              time={formatTime(d)}
-              note={t.note}
-              amountPrimary={t.amountPrimary}
-              amountUsd={t.amountUsd}
-              direction={t.direction}
-            />
+              className="motion-safe:animate-[slideIn_300ms_ease-out_forwards] opacity-0"
+              style={{ animationDelay: `${idx * 60}ms` }}
+            >
+              <Transaction
+                title={t.title}
+                time={formatTime(d)}
+                note={t.note}
+                amountPrimary={t.amountPrimary}
+                amountUsd={t.amountUsd}
+                direction={t.direction}
+              />
+            </div>
           );
         })}
       </div>

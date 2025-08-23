@@ -162,6 +162,16 @@ export default function Transactions() {
   return (
     <section className="px-4 py-2">
       <h1 className="text-xl font-semibold mb-4">Transactions</h1>
+      {grouped.length === 0 ? (
+        <div className="mt-6">
+          <div className="rounded-3xl bg-white/5 border border-white/10 p-6 text-center soft-shadow">
+            <div className="text-lg font-semibold">No transactions yet</div>
+            <div className="text-sm text-white/70 mt-1">
+              Your recent activity will appear here.
+            </div>
+          </div>
+        </div>
+      ) : null}
       {/* Month selector */}
       <div className="sticky top-[104px] z-10 -mx-4 bg-[--background]">
         <div

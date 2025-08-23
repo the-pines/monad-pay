@@ -1,15 +1,41 @@
-import { Inter } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
 import "./globals.css";
 
 import WalletContext from "@/contexts/WalletContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 
 const inter = Inter({
   variable: "--font-inter-sans",
   subsets: ["latin"],
 });
 
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin"],
+});
+
+import localFont from "next/font/local";
+
+const satoshi = localFont({
+  src: [
+    {
+      path: "../../public/fonts/satoshi/Satoshi-Variable.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/satoshi/Satoshi-VariableItalic.woff2",
+      weight: "100 900",
+      style: "italic",
+    },
+  ],
+  variable: "--font-satoshi",
+  display: "swap",
+});
+
+// then include satoshi.variable in <body className=...>
 export const metadata: Metadata = {
   title: "Monad Pay",
   description: "enirehtac em yrram",
@@ -23,8 +49,12 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased`}>
-        <WalletContext cookies={cookies}>{children}</WalletContext>
+      <body
+        className={`${inter.variable} ${spaceGrotesk.variable} ${satoshi.variable} antialiased`}
+      >
+        <ToastProvider>
+          <WalletContext cookies={cookies}>{children}</WalletContext>
+        </ToastProvider>
       </body>
     </html>
   );
