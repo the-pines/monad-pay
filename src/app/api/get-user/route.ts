@@ -6,13 +6,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 
-// prettier-ignore
 const BodySchema = z.object({
   address: z
     .string()
     .min(1)
     .transform((s) => s.trim().toLowerCase())
-    .refine((a) => isAddress(a), { message: "Invalid EVM address" }),
+    .refine((a) => isAddress(a), { message: 'Invalid EVM address' }),
 });
 
 export async function POST(req: NextRequest) {

@@ -4,11 +4,11 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppKitAccount } from '@reown/appkit/react';
 
-interface AuthContextProps {
+interface AuthProviderProps {
   children: React.ReactNode;
 }
 
-const AuthContext: React.FC<AuthContextProps> = ({ children }) => {
+const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const router = useRouter();
 
   const { isConnected } = useAppKitAccount();
@@ -21,4 +21,4 @@ const AuthContext: React.FC<AuthContextProps> = ({ children }) => {
   return <>{children}</>;
 };
 
-export default AuthContext;
+export default AuthProvider;

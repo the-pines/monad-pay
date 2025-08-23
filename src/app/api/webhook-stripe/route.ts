@@ -6,7 +6,7 @@ import { eq, or } from 'drizzle-orm';
 
 const STRIPE_API_VERSION = '2025-07-30.basil';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-07-30.basil',
+  apiVersion: STRIPE_API_VERSION,
 });
 
 export async function POST(req: NextRequest) {

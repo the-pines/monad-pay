@@ -5,9 +5,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { cards } from '@/db/schema';
 
-// prettier-ignore
 const BodySchema = z.object({
-  userId: z.uuid()
+  userId: z.uuid(),
 });
 
 export async function POST(req: NextRequest) {
