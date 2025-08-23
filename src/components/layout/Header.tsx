@@ -15,7 +15,7 @@ export default function Header() {
             href="/points"
             className="inline-flex items-center justify-center h-10 px-4 rounded-2xl text-white font-bold text-[17px] leading-[22px] bg-[linear-gradient(135deg,#FF5CAA_0%,#C0186A_100%)] shadow-sm motion-safe:animate-[wiggle_6s_ease-in-out_infinite]"
           >
-            1275 Points
+            1275 Points ✨
           </Link>
         </div>
       </div>

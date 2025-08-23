@@ -42,7 +42,7 @@ const Vaults: React.FC<{
         ))}
         <Link
           href="/vaults/new"
-          className="relative w-[175px] h-[167px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-center justify-center gap-2 text-center hover:bg-[rgba(251,250,249,0.1)] cursor-pointer order-last"
+          className="relative w-[175px] h-[167px] rounded-2xl bg-[rgba(251,250,249,0.06)] flex flex-col items-center justify-center gap-2 text-center hover:bg-[rgba(251,250,249,0.1)] cursor-pointer"
           aria-label="Create new vault"
         >
           <PlusCircleIcon
@@ -105,30 +105,19 @@ const VaultsPage: React.FC = () => {
   if (loading && !vaults.length) {
     return <div className="p-4">Loading…</div>;
   }
-
-  const changePctLabel = aggregateVault
-    ? `${Math.round(aggregateVault.changePct * 100)}%`
-    : "";
-
   return (
     <div className="flex flex-col text-xl items-start w-[393px] mx-auto">
-      <SectionHeader title={"Vaults"} subtitle={changePctLabel} />
+      <SectionHeader title={"Vaults"} />
 
       {aggregateVault ? (
         <div className="w-full px-0 flex justify-center py-4">
-          <ProgressCircle
-            value={progress}
-            size={180}
-            thickness={16}
-            label={`${Math.round(progress * 100)}%`}
-          />
+          <ProgressCircle value={progress} size={180} thickness={16} />
         </div>
       ) : null}
 
       <Vaults
         vaults={vaults}
         onSelect={(v) => {
-          // navigate to detail page
           window.location.href = `/vaults/${v.id}`;
         }}
       />

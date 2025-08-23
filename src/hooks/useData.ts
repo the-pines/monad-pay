@@ -135,6 +135,12 @@ export function useVaults() {
             abi: VAULT_ABI,
             functionName: "assetBalance" as const,
           })),
+          // creator (owner)
+          ...vaultAddresses.map((va) => ({
+            address: va,
+            abi: VAULT_ABI,
+            functionName: "creator" as const,
+          })),
         ]
       : [],
     query: { enabled: enabled && vaultAddresses.length > 0 },
@@ -191,6 +197,7 @@ export function useVaults() {
     const isNativeStart = namesStart + vaultAddresses.length;
     const assetsStart = isNativeStart + vaultAddresses.length;
     const balancesStart = assetsStart + vaultAddresses.length;
+    const creatorsStart = balancesStart + vaultAddresses.length;
 
     // Produce consistent timestamps across all vaults for aggregation
     const now = new Date();
@@ -232,6 +239,14 @@ export function useVaults() {
           ("0x0000000000000000000000000000000000000000" as `0x${string}`),
         isNative,
         decimals,
+        creator:
+          (meta[creatorsStart + i]?.result as `0x${string}` | undefined) ??
+          undefined,
+        isShared:
+          Boolean(address) &&
+          Boolean(meta[creatorsStart + i]?.result as string | undefined) &&
+          String(meta[creatorsStart + i]?.result as string).toLowerCase() !==
+            String(address).toLowerCase(),
         balanceUsd: balance,
         goalUsd: goal,
         changeUsd: 0,
@@ -247,6 +262,7 @@ export function useVaults() {
     vaultMetaReads.data,
     decimalsReads.data,
     symbolReads.data,
+    address,
   ]);
 
   return React.useMemo(

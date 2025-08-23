@@ -10,7 +10,6 @@ export type ProgressCircleProps = {
   className?: string;
 };
 
-// A visually rich progress circle using conic gradients with a subtle rotating glisten
 const ProgressCircle: React.FC<ProgressCircleProps> = ({
   value,
   size = 128,
@@ -19,6 +18,8 @@ const ProgressCircle: React.FC<ProgressCircleProps> = ({
   className,
 }) => {
   const clamped = Math.max(0, Math.min(1, value || 0));
+
+  // Mask to cut a donut shape out of a filled circle
   const ringMask = `radial-gradient(closest-side, transparent calc(50% - ${thickness}px), black calc(50% - ${
     thickness - 1
   }px))`;
@@ -26,7 +27,10 @@ const ProgressCircle: React.FC<ProgressCircleProps> = ({
   return (
     <div
       className={"relative inline-grid place-items-center " + (className || "")}
-      style={{ width: size, height: size }}
+      style={{
+        width: size,
+        height: size,
+      }}
       aria-label={label || "progress"}
     >
       {/* Track */}
@@ -41,7 +45,7 @@ const ProgressCircle: React.FC<ProgressCircleProps> = ({
         }}
       />
 
-      {/* Progress with rich gradient */}
+      {/* Progress arc */}
       <div
         className="absolute inset-0 rounded-full"
         style={{
@@ -56,37 +60,6 @@ const ProgressCircle: React.FC<ProgressCircleProps> = ({
           filter: "drop-shadow(0 4px 18px rgba(143,124,255,.35))",
         }}
       />
-
-      {/* Rotating glisten layer */}
-      <div
-        className="absolute inset-0 rounded-full"
-        style={{
-          background:
-            "conic-gradient(from 0deg, rgba(255,255,255,0) 0deg, rgba(255,255,255,.28) 20deg, rgba(255,255,255,0) 40deg, rgba(255,255,255,0) 360deg)",
-          mixBlendMode: "screen",
-          mask: ringMask,
-          WebkitMask: ringMask,
-          animation: "pc-rotate 2.4s linear infinite",
-          opacity: 0.9,
-        }}
-        aria-hidden
-      />
-
-      {/* Center */}
-      <div className="relative z-10 text-sm font-semibold text-[#FBFAF9]">
-        {label}
-      </div>
-
-      <style jsx>{`
-        @keyframes pc-rotate {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
     </div>
   );
 };

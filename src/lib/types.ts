@@ -85,6 +85,10 @@ export type UiVault = {
   assetAddress: `0x${string}`; // ERC20 token address
   decimals: number; // token decimals
   isNative?: boolean; // true if native MON vault
+  // Address of the on-chain creator/owner (read from contract)
+  creator?: `0x${string}` | string;
+  // True if this vault is owned by someone else but visible to current user
+  isShared?: boolean;
   balanceUsd: number; // current balance
   goalUsd: number; // target goal for the vault
   changeUsd: number; // period change used for +$100 labels

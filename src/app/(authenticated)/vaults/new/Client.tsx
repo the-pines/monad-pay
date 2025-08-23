@@ -69,6 +69,8 @@ export default function CreateVaultClient() {
   const [decimals, setDecimals] = React.useState<number>(18);
   const [isNative, setIsNative] = React.useState<boolean>(true);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [sharedAddress, setSharedAddress] = React.useState<string>("");
+  const isAddingShared = sharedAddress.trim().length > 0;
 
   const tokenOptions = React.useMemo(() => {
     const options: Array<{
@@ -147,6 +149,30 @@ export default function CreateVaultClient() {
       setFormError("Connect your wallet first");
       return;
     }
+    // Shared attach flow
+    if (isAddingShared) {
+      try {
+        const addr = sharedAddress.trim().toLowerCase();
+        const isHex = /^0x[0-9a-f]{40}$/.test(addr);
+        if (!isHex) {
+          setFormError("Enter a valid contract address");
+          return;
+        }
+        await fetch("/api/vaults/attach", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ creator: address, vaultAddress: addr }),
+        });
+      } catch (err) {
+        const message =
+          (err as Error).message || "Failed to attach shared vault";
+        setFormError(message);
+        return;
+      }
+      router.push("/vaults");
+      return;
+    }
+
     if (!VAULT_FACTORY_ADDRESS) {
       setFormError("Factory address not configured");
       return;
@@ -258,7 +284,8 @@ export default function CreateVaultClient() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Vacation"
-            className="w-[362px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9]"
+            disabled={isAddingShared}
+            className="w-[362px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9] disabled:opacity-60"
           />
         </div>
         <div className="mt-4">
@@ -281,7 +308,8 @@ export default function CreateVaultClient() {
                 setDecimals(opt.decimals);
               }
             }}
-            className="w-[362px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9]"
+            disabled={isAddingShared}
+            className="w-[362px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9] disabled:opacity-60"
           >
             {tokenOptions.map((t) => (
               <option
@@ -297,7 +325,7 @@ export default function CreateVaultClient() {
         <div className="mt-4 flex gap-2">
           <div className="flex-1">
             <label className="block text-sm text-white/70 mb-1">
-              Goal (token units)
+              Goal (number of tokens)
             </label>
             <input
               type="number"
@@ -306,8 +334,33 @@ export default function CreateVaultClient() {
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
               placeholder="1000"
-              className="w-[230px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9]"
+              disabled={isAddingShared}
+              className="w-[230px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9] disabled:opacity-60"
             />
+          </div>
+        </div>
+
+        <div className="mt-6 flex items-center w-full">
+          <div className="h-px flex-1 bg-white/10" />
+          <span className="mx-3 text-xs text-white/50">
+            OR add someone else’s vault
+          </span>
+          <div className="h-px flex-1 bg-white/10" />
+        </div>
+        <div className="mt-3">
+          <label className="block text-sm text-white/70 mb-1">
+            Vault contract address
+          </label>
+          <input
+            type="text"
+            inputMode="text"
+            value={sharedAddress}
+            onChange={(e) => setSharedAddress(e.target.value)}
+            placeholder="0x…"
+            className="w-[362px] rounded-lg bg-[rgba(251,250,249,0.06)] px-3 py-2 outline-none focus:ring-2 focus:ring-[#836EF9] text-[#FBFAF9]"
+          />
+          <div className="mt-1 text-[11px] text-white/50">
+            Enter a vault contract to contribute as a collaborator.
           </div>
         </div>
 
@@ -326,11 +379,13 @@ export default function CreateVaultClient() {
             disabled={isPending || isConfirming}
             className="w-[362px] inline-flex items-center justify-center px-3 py-2 rounded-lg bg-[#836EF9] hover:brightness-110 text-[#FBFAF9] font-medium disabled:opacity-60"
           >
-            {isPending
+            {isAddingShared
+              ? "Add shared vault"
+              : isPending
               ? "Confirm in wallet…"
               : isConfirming
               ? "Waiting for confirmation…"
-              : "Create vault"}
+              : "Add vault"}
           </button>
         </div>
       </form>

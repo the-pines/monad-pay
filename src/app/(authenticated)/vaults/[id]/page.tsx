@@ -19,6 +19,7 @@ import {
 } from "wagmi";
 import { parseUnits } from "viem";
 import { VAULT_ABI } from "@/config/contracts";
+import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 
 function formatToken(amount: number, symbol?: string): string {
   const s = symbol || "";
@@ -40,6 +41,7 @@ export default function VaultDetailPage() {
   const [addAmount, setAddAmount] = React.useState<string>("");
   const [addError, setAddError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isSharedInfoOpen, setIsSharedInfoOpen] = React.useState(false);
 
   const vault = React.useMemo<UiVault | null>(() => {
     if (!vaults) return null;
@@ -246,6 +248,27 @@ export default function VaultDetailPage() {
         <h1 className="text-xl font-semibold text-[#FBFAF9] mt-2">
           {vault.name}
         </h1>
+        {vault.isShared ? (
+          <div className="mt-2 inline-flex items-center gap-1 text-[12px] text-white/80 relative">
+            <span className="rounded-full bg-white/10 px-2 py-0.5">
+              SHARED WITH ME
+            </span>
+            <button
+              type="button"
+              aria-label="What does shared mean?"
+              className="ml-1 text-white/70 hover:text-white/90"
+              onClick={() => setIsSharedInfoOpen((v) => !v)}
+            >
+              <QuestionMarkCircleIcon className="w-4 h-4" aria-hidden="true" />
+            </button>
+            {isSharedInfoOpen ? (
+              <div className="absolute top-full mt-1 left-0 z-20 w-[220px] rounded-lg bg-[#1A003F] text-white/90 text-[11px] p-2 border border-white/10 shadow-lg">
+                You can contribute to this vault but only the owner can
+                withdraw.
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <div className="mt-4">
           <ProgressCircle
             value={progress}
@@ -286,7 +309,7 @@ export default function VaultDetailPage() {
             >
               Add funds
             </button>
-            {Boolean(canWithdrawRead.data) ? (
+            {Boolean(canWithdrawRead.data) && !vault.isShared ? (
               <button
                 type="button"
                 onClick={async () => {
