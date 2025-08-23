@@ -69,7 +69,11 @@ export function useUserCard() {
 }
 
 export function useUserTransactions() {
-  return useAsync<UiTransaction[]>(fetchUserTransactions, []);
+  const { address } = useAccount();
+  return useAsync<UiTransaction[]>(
+    () => fetchUserTransactions(address),
+    [address]
+  );
 }
 
 export function useVirtualCardDisplay() {

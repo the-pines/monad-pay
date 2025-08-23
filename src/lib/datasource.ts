@@ -7,15 +7,8 @@ import type {
   DbTransfer,
   DbUser,
   UiCardPublic,
-  UiVault,
 } from "./types";
-import {
-  cardsFake,
-  paymentsFake,
-  transfersFake,
-  usersFake,
-  virtualCardDisplay,
-} from "./fakeData";
+import { cardsFake, usersFake, virtualCardDisplay } from "./fakeData";
 
 export interface DataSource {
   getCurrentUser(): Promise<DbUser>;
@@ -40,11 +33,6 @@ class FakeDataSource implements DataSource {
   async getUserCard(): Promise<DbCard | undefined> {
     const user = await this.getCurrentUser();
     return cardsFake.find((c) => c.userId === user.id);
-  }
-
-  async getUserPayments(): Promise<DbPayment[]> {
-    const card = await this.getUserCard();
-    return card ? paymentsFake.filter((p) => p.cardId === card.id) : [];
   }
 
   async getUserTransfers(): Promise<DbTransfer[]> {
