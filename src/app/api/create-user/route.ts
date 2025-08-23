@@ -10,17 +10,11 @@ import { isAddress } from 'viem';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {});
 
+// prettier-ignore
 const BodySchema = z.object({
   user: z.object({
-    name: z
-      .string()
-      .min(1)
-      .transform((s) => s.trim()),
-    address: z
-      .string()
-      .min(1)
-      .transform((s) => s.trim().toLowerCase())
-      .refine((a) => isAddress(a), { message: 'Invalid EVM address' }),
+    name: z.string().min(1).transform((s) => s.trim()),
+    address: z.string().min(1).transform((s) => s.trim().toLowerCase()).refine((a) => isAddress(a), { message: 'Invalid EVM address' }),
     provider: z.enum(['gmail', 'apple', 'wallet']),
   }),
   cardholder: z.object({

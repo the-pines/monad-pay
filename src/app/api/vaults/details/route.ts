@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { createPublicClient, http } from "viem";
+import { Chain, createPublicClient, http } from "viem";
 import type { Abi } from "viem";
 import { db } from "@/db";
 import { users, vaults } from "@/db/schema";
@@ -15,6 +15,7 @@ const rpcUrl = (
   monadTestnet as unknown as { rpcUrls?: { default?: { http?: string[] } } }
 ).rpcUrls?.default?.http?.[0];
 const publicClient = createPublicClient({
+  chain: monadTestnet as unknown as Chain,
   transport: http(rpcUrl),
 });
 
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
       address: `0x${string}`;
       abi: Abi;
       functionName: string;
-      args?: unknown[];
+      args?: readonly unknown[];
     }> = [];
     for (const va of vaultAddresses) {
       contracts.push({
@@ -97,12 +98,7 @@ export async function GET(req: NextRequest) {
     }
 
     const result = await publicClient.multicall({
-      // viem types are strict; this list is known-safe at runtime
-      // use unknown[] here to avoid any
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      contracts: contracts as unknown[] as Parameters<
-        typeof publicClient.multicall
-      >[0]["contracts"],
+      contracts,
       allowFailure: true,
     });
     const goalsStart = 0;
@@ -152,10 +148,7 @@ export async function GET(req: NextRequest) {
     });
     const erc20Results = erc20Contracts.length
       ? await publicClient.multicall({
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          contracts: erc20Contracts as unknown[] as Parameters<
-            typeof publicClient.multicall
-          >[0]["contracts"],
+          contracts: erc20Contracts,
           allowFailure: true,
         })
       : [];
