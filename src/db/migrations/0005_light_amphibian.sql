@@ -1,1 +1,0 @@
-ALTER TABLE "cards" ALTER COLUMN "last_4" SET DATA TYPE char(4);

@@ -56,6 +56,7 @@ export const cards = pgTable('cards', {
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   stripeCardId: text('stripe_card_id').notNull(),
   stripeCardHolderId: text('stripe_cardholder_id').notNull(),
+  name: text('text').notNull(),
   brand: text('brand').notNull(),
   last4: char('last_4', {length: 4}).notNull(),
   status: cardStatusE('status').notNull(),
@@ -70,15 +71,18 @@ export const cards = pgTable('cards', {
 export const payments = pgTable('payments', {
   id: uuid('id').primaryKey().defaultRandom(),
   cardId: uuid('card_id').notNull().references(() => cards.id, { onDelete: 'cascade' }),
-  orderId: text('order_id').notNull(),
-  entity: text('entity').notNull(), // commerce name
+  paymentId: text('payment_id').notNull(),
   currency: text('currency').notNull(), // USD, ARS, MEX, EUR, etc
-  amount: numeric('amount', { precision: 20, scale: 2 }).notNull(),
+  amount: numeric('amount', { precision: 20, scale: 0 }).notNull(),
+  merchant_name: text('merchant_name').notNull(), // commerce name
+  merchant_currency: text('merchant_currency').notNull(), // USD, ARS, MEX, EUR, etc
+  merchant_amount: numeric('merchant_amount', { precision: 20, scale: 0 }).notNull(),
   status: paymentStatusE('status').notNull().default('started'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [
-    index("i_payment_card").on(t.cardId)
+    index("i_payment_card").on(t.cardId),
+    uniqueIndex('u_payment_id').on(t.paymentId),
 ])
 
 // prettier-ignore

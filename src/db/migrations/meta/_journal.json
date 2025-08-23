@@ -5,43 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1755839666334,
-      "tag": "0000_chunky_zarda",
+      "when": 1755979925687,
+      "tag": "0000_cooing_speed",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1755901680103,
-      "tag": "0001_lonely_malcolm_colcord",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1755902742291,
-      "tag": "0002_heavy_mauler",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1755921520655,
-      "tag": "0003_normal_norrin_radd",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1755924518597,
-      "tag": "0004_rare_pride",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1755927076024,
-      "tag": "0005_light_amphibian",
+      "when": 1755982587642,
+      "tag": "0001_dry_shape",
       "breakpoints": true
     }
   ]

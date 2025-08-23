@@ -1,5 +1,5 @@
 {
-  "id": "36df5f00-a79a-4c35-b859-c6896c86f970",
+  "id": "3301f8b0-6a12-4538-bcb9-fa02989902fc",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -21,15 +21,33 @@
           "primaryKey": false,
           "notNull": true
         },
-        "stripe_id": {
-          "name": "stripe_id",
+        "stripe_card_id": {
+          "name": "stripe_card_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "stripe_card_id": {
-          "name": "stripe_card_id",
+        "stripe_cardholder_id": {
+          "name": "stripe_cardholder_id",
           "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "brand": {
+          "name": "brand",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_4": {
+          "name": "last_4",
+          "type": "char(4)",
           "primaryKey": false,
           "notNull": true
         },
@@ -226,14 +244,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "order_id": {
-          "name": "order_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "entity": {
-          "name": "entity",
+        "payment_id": {
+          "name": "payment_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -246,6 +258,24 @@
         },
         "amount": {
           "name": "amount",
+          "type": "numeric(20, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "merchant_name": {
+          "name": "merchant_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "merchant_currency": {
+          "name": "merchant_currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "merchant_amount": {
+          "name": "merchant_amount",
           "type": "numeric(20, 2)",
           "primaryKey": false,
           "notNull": true
@@ -285,6 +315,21 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "u_payment_id": {
+          "name": "u_payment_id",
+          "columns": [
+            {
+              "expression": "payment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -443,6 +488,12 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "address": {
           "name": "address",
           "type": "text",
@@ -493,9 +544,107 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "i_user_name": {
+          "name": "i_user_name",
+          "columns": [
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.vaults": {
+      "name": "vaults",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "collaborators": {
+          "name": "collaborators",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ARRAY[]::text[]"
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "i_vault_user": {
+          "name": "i_vault_user",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "vaults_user_id_users_id_fk": {
+          "name": "vaults_user_id_users_id_fk",
+          "tableFrom": "vaults",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
