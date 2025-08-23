@@ -1,7 +1,7 @@
-import Link from "next/link";
-import Image from "next/image";
-import { PointsBadge } from "@/components/feature";
-import { UserIcon } from "@heroicons/react/24/outline";
+import Link from 'next/link';
+import Image from 'next/image';
+import { PointsBadge } from '@/components/feature';
+import { UserIcon } from '@heroicons/react/24/outline';
 
 export default function Header() {
   return (
@@ -17,9 +17,6 @@ export default function Header() {
               width={24}
               height={24}
             />
-            <h1 className="font-bold text-[17px] leading-[22px] text-[--foreground]">
-              Monad Pay
-            </h1>
           </div>
 
           <div className="flex items-center gap-2">
@@ -29,8 +26,7 @@ export default function Header() {
             <Link
               href="/settings"
               aria-label="Profile & settings"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 hover:bg-white/15 active:bg-white/20"
-            >
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 hover:bg-white/15 active:bg-white/20">
               <span className="sr-only">Settings</span>
               <UserIcon className="w-5 h-5 text-white/90" />
             </Link>
