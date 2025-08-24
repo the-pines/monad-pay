@@ -22,6 +22,7 @@ import { VAULT_ABI } from '@/config/contracts';
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import { formatToken } from '@/lib/format';
 import { useUser } from '@/contexts/UserContext';
+import { Button } from '@/components/ui';
 
 // Skeleton moved to components/feature/Vaults/VaultDetailSkeleton
 
@@ -293,12 +294,12 @@ export default function VaultDetailPage() {
             </div>
           </div>
           <div className="mt-3">
-            <button
+            <Button
               type="button"
               onClick={() => setIsAddFundsOpen(true)}
               className="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg bg-gradient-to-r from-[#8A76F9] to-[#2dd4bf] hover:brightness-110 text-[#0B1B1B] font-medium">
               Add funds
-            </button>
+            </Button>
             {Boolean(canWithdrawRead.data) && !vault.isShared ? (
               <button
                 type="button"
@@ -396,13 +397,13 @@ export default function VaultDetailPage() {
                 className="px-3 py-2 rounded-lg bg-[rgba(251,250,249,0.06)] hover:bg-[rgba(251,250,249,0.1)]">
                 Cancel
               </button>
-              <button
+              <Button
                 type="button"
                 onClick={handleConfirmAddFunds}
                 disabled={isSubmitting}
-                className="px-3 py-2 rounded-lg bg-[#2dd4bf] hover:brightness-110 disabled:opacity-60 text-[#0B1B1B]">
+                className="px-3 py-[22px] rounded-lg bg-[#2dd4bf] hover:brightness-110 disabled:opacity-60 text-[#0B1B1B]">
                 {isSubmitting ? 'Adding…' : 'Confirm'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
