@@ -4,30 +4,58 @@
 
 With Monad Pay, users can pay with _anything_, _anywhere._ We issue a virtual card for everyone so they can spend their Monad balance. They can use it anywhere that accepts VISA!
 
-Built by [Nacho](https://x.com/ziginiz) and [Cat](https://x.com/catmcgeecode)
-
-![App](public/assets/docs/app.png)
+<!-- Built by [Nacho](https://x.com/ziginiz) and [Cat](https://x.com/catmcgeecode) -->
 
 ## Contents
 
 - Features
-- Repo layout
-- Running the app
+- How it works
 
 ## Features
 
-- Use your own wallet (EOA or smart wallet) to pay for transactions instore and online that accepts VISA. The merchant gets fiat without you ever having to touch fiat
-- Save by contributing to Vaults with any token in your account, which automatically stakes for you allowing you to reach your goal faster
-  - Share your Vaults with other people on Monad Pay and they can contribute too! Only you can withdraw
-- Earn Points onchain by using your card that can be redeemed for instore or onchain rewards
+- Create a self-custodial virtual card that allows you to pay in fiat whatever is instore or online. The merchant receives FIAT while you use your crypto without having to worry about conversions or any of the crypto headache.
+
+- Create Vaults and fill them with any token in your account, these Vaults can be collaborative which means you can invite other people to contribute to it while remaining the control of the funds. Also, the funds in the Vault get staked automatically allowing you to increase your money passively.
+
+- Each payment that you do using _Monad Pay_ gives you on-chain points that you can redeem to use in the ecosystem (e.g. sponsored swaps in 0x)
 
 ## How it works
 
-When a user logs in, we ask them to sign a transaction that gives us access to a chosen number of tokens. When they spend using their card, we cover their transaction in fiat, routing through their card so it appears on their statement, and transfer equivalent tokens from their wallet into ours.
+### 1. Sign Up
 
-![Payment flow](public/assets/docs/payment-flow.png)
+We implemented _reown_ as our wallet provider, which allows us to provide an easy a friendly interface for the user to enter to our platform.
 
-Sounds simple? That’s because it is! But it comes with quite a few complexities. To learn more information about exactly how we are staying secure with our funds, handling refunds, issuing cards, and more, read the [one pager]().
+> Note: for the sake of simplicity, we are allowing only login with wallet, however, is in our roadmap to add social logins like Google and Apple.
+
+After the user connects to the platform, we prompt him for his first and last name that we will use later for the card creation. The next step is to solicite approval of their selected ERC20 (USDC by default) to the user.
+
+Once the user gives their approval, the important part comes. Using our Stripe Bussiness account (a real one that we created with a real business called [MonadPay](https://find-and-update.company-information.service.gov.uk/company/NI732549) in UK 😄) we issue a card on his name and we store all the important information in our database.
+
+> We fund the user with 1 USDC for the sake of the demo, so the user has an starting balance at the moment of init the app.
+
+After funding their account, we mint him 1000 welcome points and thats it! The sign-up process takes between 20s-40s and after that you will have a self-custodial virtual card that you would be able to use to buy our favourite coffee with _magic internet money_
+
+![alt text](signup-flow.png)
+
+### 2. Payments
+
+After a user has created their account, he will have a issued card in Stripe for us, which he can use to spend anywhere as any other normal card.
+
+Every time the user attempts to use their card, we are gonna receive an event in our backend and after carefully validate the information (user and card existance, balance, allowance, etc) we authorize or not the payment attempt.
+
+1. In the case the user don't pass the validations, we just simply reject the payment and it will be reflected in the PoS that the user is using.
+
+2. In the case that the user pass the validations, we cover their transaction in fiat using our own liquidity pool in Stripe, and after the payment was processed succesfully we execute a transaccion to collect the equivalent amount of the payment in the token that he granted approval before. Finally we record everything in the database and mint points to the user as a reward for their spending.
+
+> We are using ENVIO for the indexing and fast-access of all the transactions performed by the user.
+
+![payment flow](payment-flow.png)
+
+### Vaults
+
+### Database Schema
+
+![database schema](database-schema.png)
 
 ## Tech Stack
 
