@@ -1,14 +1,14 @@
-import z from 'zod';
-import { eq } from 'drizzle-orm';
-import { erc20Abi } from 'viem';
-import { monadTestnet } from 'viem/chains';
-import { privateKeyToAccount } from 'viem/accounts';
-import { NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, createWalletClient, http } from 'viem';
+import z from "zod";
+import { eq } from "drizzle-orm";
+import { erc20Abi } from "viem";
+import { monadTestnet } from "viem/chains";
+import { privateKeyToAccount } from "viem/accounts";
+import { NextRequest, NextResponse } from "next/server";
+import { createPublicClient, createWalletClient, http } from "viem";
 
-import { db } from '@/db';
-import { users, cards, payments, executions, transfers } from '@/db/schema';
-import { broadcastAwardPoints } from '@/lib/points';
+import { db } from "@/db";
+import { users, cards, payments, executions, transfers } from "@/db/schema";
+import { broadcastAwardPoints } from "@/lib/points";
 
 const RPC_URL = process.env.MONAD_RPC_URL!;
 const EXECUTOR_PK = process.env.EXECUTOR_PRIVATE_KEY! as `0x${string}`;
@@ -41,8 +41,8 @@ function gbpMinorToUsdcMinorToday(gbpMinor: string | bigint) {
     return {
       asOf,
       gbpUsd: rate,
-      gbpMinor: '0',
-      usdcMinor: '0',
+      gbpMinor: "0",
+      usdcMinor: "0",
     };
   }
 
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     const parsed = BodySchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Invalid body', details: z.treeifyError(parsed.error) },
+        { error: "Invalid body", details: z.treeifyError(parsed.error) },
         { status: 400 }
       );
     }
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     });
     if (!payment) {
       return NextResponse.json(
-        { error: 'No completed payment for card' },
+        { error: "No completed payment for card" },
         { status: 404 }
       );
     }
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     });
     if (already) {
       return NextResponse.json(
-        { error: 'Payment already executed', txHash: already.txHash },
+        { error: "Payment already executed", txHash: already.txHash },
         { status: 409 }
       );
     }
@@ -100,14 +100,14 @@ export async function POST(req: NextRequest) {
       where: eq(cards.id, payment.cardId),
     });
     if (!card) {
-      return NextResponse.json({ error: 'Card not found' }, { status: 404 });
+      return NextResponse.json({ error: "Card not found" }, { status: 404 });
     }
 
     const user = await db.query.users.findFirst({
       where: eq(users.id, card.userId),
     });
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const owner = user.address as `0x${string}`;
@@ -116,13 +116,13 @@ export async function POST(req: NextRequest) {
       publicClient.readContract({
         address: USDC_ADDRESS,
         abi: erc20Abi,
-        functionName: 'allowance',
+        functionName: "allowance",
         args: [owner, account.address],
       }) as Promise<bigint>,
       publicClient.readContract({
         address: USDC_ADDRESS,
         abi: erc20Abi,
-        functionName: 'balanceOf',
+        functionName: "balanceOf",
         args: [owner],
       }) as Promise<bigint>,
     ]);
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
     if (allowance < usdcMinor) {
       return NextResponse.json(
         {
-          error: 'Insufficient USDC allowance',
+          error: "Insufficient USDC allowance",
           needed: usdcMinor.toString(),
           allowance: allowance.toString(),
         },
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
     if (balance < usdcMinor) {
       return NextResponse.json(
         {
-          error: 'Insufficient USDC balance',
+          error: "Insufficient USDC balance",
           needed: usdcMinor.toString(),
           balance: balance.toString(),
         },
@@ -155,21 +155,21 @@ export async function POST(req: NextRequest) {
     const txHash = await walletClient.writeContract({
       address: USDC_ADDRESS,
       abi: erc20Abi,
-      functionName: 'transferFrom',
+      functionName: "transferFrom",
       args: [owner, TREASURY, usdcMinor],
     });
     await publicClient.waitForTransactionReceipt({ hash: txHash });
 
     await db.insert(executions).values({
       paymentId: payment.id,
-      symbol: 'USDC',
+      symbol: "USDC",
       amount: usdcMinor.toString(),
       decimals: 6,
       txHash,
     });
     await db.insert(transfers).values({
       userId: user.id,
-      symbol: 'USDC',
+      symbol: "USDC",
       amount: usdcMinor.toString(),
       decimals: 6,
       sender: owner,
@@ -177,18 +177,18 @@ export async function POST(req: NextRequest) {
       txHash,
     });
 
-    const pointsAmount = (usdcMinor / BigInt(1_000_000)) * BigInt(10);
+    const pointsAmount = usdcMinor / BigInt(100);
     if (pointsAmount > BigInt(0)) {
       try {
         const res = await broadcastAwardPoints({
           to: owner,
           amount: pointsAmount,
         });
-        if ('error' in res) {
-          console.error('[points-award] broadcast error', res.error);
+        if ("error" in res) {
+          console.error("[points-award] broadcast error", res.error);
         }
       } catch (error) {
-        console.error('[points-award] unexpected failure', error);
+        console.error("[points-award] unexpected failure", error);
       }
     }
 
@@ -214,9 +214,9 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
   } catch (e) {
-    console.error('[POST /api/execute-payment] error:', e);
+    console.error("[POST /api/execute-payment] error:", e);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
