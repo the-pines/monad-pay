@@ -191,10 +191,8 @@ export default function SignUpPage() {
     setError(null);
 
     try {
-      // Ensure funding happened before approvals
       await maybeFundMon();
 
-      // sequentially approve selected tokens if not already approved
       await ensureTokenApprovals({
         config: wagmiCfg,
         owner: address as Address,
@@ -202,7 +200,6 @@ export default function SignUpPage() {
         tokens: selectedTokens,
       });
 
-      // verify USDC allowance
       const usdcAllowance = (await readContract(wagmiCfg, {
         address: usdcToken.address as Address,
         abi: erc20Abi,
