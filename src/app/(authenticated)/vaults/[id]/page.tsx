@@ -16,9 +16,12 @@ import {
   useBalance,
   useReadContract,
   useWriteContract,
+  useWaitForTransactionReceipt,
 } from "wagmi";
+import { waitForTransactionReceipt } from "wagmi/actions";
 import { parseUnits } from "viem";
 import { VAULT_ABI } from "@/config/contracts";
+import { wagmiConfig } from "@/config/wagmi";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { formatToken } from "@/lib/format";
 import { Button } from "@/components/ui";
@@ -36,6 +39,7 @@ export default function VaultDetailPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSharedInfoOpen, setIsSharedInfoOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
+  const [txHash, setTxHash] = React.useState<`0x${string}` | undefined>();
 
   const vault = React.useMemo<UiVault | null>(() => {
     if (!vaults) return null;
@@ -98,7 +102,7 @@ export default function VaultDetailPage() {
     },
   });
 
-  const [isSubmittingMeta] = React.useState(false);
+  // removed meta submit state
   const prevCanWithdraw = React.useRef<boolean>(false);
   const [isCelebrating, setIsCelebrating] = React.useState(false);
   React.useEffect(() => {
@@ -140,41 +144,45 @@ export default function VaultDetailPage() {
     try {
       const units = parseUnits(String(amount), vault.decimals);
       if (vault.isNative) {
-        await writeContractAsync({
+        const hash = await writeContractAsync({
           address: vault.id as `0x${string}`,
           abi: VAULT_ABI,
           functionName: "contributeNative",
           args: [],
           value: units,
         });
+        setTxHash(hash);
       } else {
-        await writeContractAsync({
+        const approveHash = await writeContractAsync({
           address: vault.assetAddress as `0x${string}`,
           abi: erc20Abi,
           functionName: "approve",
           args: [vault.id as `0x${string}`, units],
         });
-        await writeContractAsync({
+        await waitForTransactionReceipt(wagmiConfig, { hash: approveHash });
+        const contributeHash = await writeContractAsync({
           address: vault.id as `0x${string}`,
           abi: VAULT_ABI,
           functionName: "contribute",
           args: [units],
         });
+        setTxHash(contributeHash);
       }
     } catch (err) {
       const msg =
         (err as Error)?.message || "Something went wrong. Please try again.";
       setAddError(msg);
-    } finally {
       setIsSubmitting(false);
     }
   }
 
+  const receipt = useWaitForTransactionReceipt({ hash: txHash });
   React.useEffect(() => {
-    if (!isSubmitting && !isSubmittingMeta) return;
-    setIsAddFundsOpen(false);
-    setAddAmount("");
-    (async () => {
+    if (!txHash) return;
+    if (receipt.isSuccess) {
+      setIsSubmitting(false);
+      setIsAddFundsOpen(false);
+      setAddAmount("");
       try {
         const vb = vaultBalanceRead as unknown as {
           refetch?: () => Promise<unknown>;
@@ -182,14 +190,12 @@ export default function VaultDetailPage() {
         const cw = canWithdrawRead as unknown as {
           refetch?: () => Promise<unknown>;
         };
-        // Immediately refetch a few times to surface updates and celebration without manual refresh
-        for (let i = 0; i < 4; i++) {
-          await Promise.all([vb.refetch?.(), cw.refetch?.()]);
-          await new Promise((r) => setTimeout(r, 400));
-        }
+        vb.refetch?.();
+        cw.refetch?.();
       } catch {}
-    })();
-  }, [isSubmitting, isSubmittingMeta, vaultBalanceRead, canWithdrawRead]);
+      router.push("/vaults");
+    }
+  }, [receipt.isSuccess, txHash, router, vaultBalanceRead, canWithdrawRead]);
 
   const goalUnits = vault?.goalUsd ?? 0;
   const liveBalUnits = React.useMemo(() => {

@@ -1,19 +1,18 @@
-import z from 'zod';
-import Stripe from 'stripe';
-import { eq } from 'drizzle-orm';
-import { Address, isAddress } from 'viem';
-import { createPublicClient, createWalletClient, http } from 'viem';
-import { monadTestnet } from 'viem/chains';
-import { randomUUID } from 'crypto';
-import { NextRequest, NextResponse } from 'next/server';
+import z from "zod";
+import Stripe from "stripe";
+import { eq } from "drizzle-orm";
+import { Address, isAddress } from "viem";
+import { createPublicClient, createWalletClient, http } from "viem";
+import { monadTestnet } from "viem/chains";
+import { randomUUID } from "crypto";
+import { NextRequest, NextResponse } from "next/server";
 
-import { db } from '@/db';
-import { cards, users } from '@/db/schema';
-import { fundUserWithUsdcVia0x } from '@/lib/swap';
-import { AML_ABI, AML_ADDRESS } from '@/config/contracts';
-import { privateKeyToAccount } from 'viem/accounts';
+import { db } from "@/db";
+import { cards, users } from "@/db/schema";
+import { AML_ABI, AML_ADDRESS } from "@/config/contracts";
+import { privateKeyToAccount } from "viem/accounts";
 
-const STRIPE_API_VERSION = '2025-07-30.basil';
+const STRIPE_API_VERSION = "2025-07-30.basil";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: STRIPE_API_VERSION,
 });
@@ -31,8 +30,8 @@ const BodySchema = z.object({
       .string()
       .min(1)
       .transform((s) => s.trim().toLowerCase())
-      .refine((a) => isAddress(a), { message: 'Invalid EVM address' }),
-    provider: z.enum(['gmail', 'apple', 'wallet']),
+      .refine((a) => isAddress(a), { message: "Invalid EVM address" }),
+    provider: z.enum(["gmail", "apple", "wallet"]),
   }),
   cardholder: z.object({
     name: z.string().min(1), // display name (~24 chars suggested)
@@ -51,7 +50,7 @@ const BodySchema = z.object({
         city: z.string().min(1),
         state: z.string().min(1),
         postal_code: z.string().min(1),
-        country: z.literal('GB').default('GB'),
+        country: z.literal("GB").default("GB"),
         line2: z.string().optional(),
       }),
     }),
@@ -68,7 +67,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json(
         {
-          error: 'Invalid request body',
+          error: "Invalid request body",
           details: z.treeifyError(parsed.error),
         },
         { status: 400 }
@@ -96,11 +95,11 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
-    const baseKey = req.headers.get('Idempotency-Key') ?? `op_${randomUUID()}`;
+    const baseKey = req.headers.get("Idempotency-Key") ?? `op_${randomUUID()}`;
 
     const cardholderParams: Stripe.Issuing.CardholderCreateParams = {
-      type: 'individual',
-      status: 'active',
+      type: "individual",
+      status: "active",
       name: cardholder.name,
       email: cardholder.email,
       phone_number: cardholder.phone_number,
@@ -132,9 +131,9 @@ export async function POST(req: NextRequest) {
 
     const cardParams: Stripe.Issuing.CardCreateParams = {
       cardholder: createdCardholder.id,
-      currency: 'gbp',
-      type: 'virtual',
-      status: 'active',
+      currency: "gbp",
+      type: "virtual",
+      status: "active",
     };
     const createdCard = await stripe.issuing.cards.create(cardParams, {
       idempotencyKey: `${baseKey}:card`,
@@ -149,7 +148,7 @@ export async function POST(req: NextRequest) {
         name: createdCard.cardholder.name,
         brand: createdCard.brand,
         last4: createdCard.last4,
-        status: 'active',
+        status: "active",
       })
       .returning();
 
@@ -168,27 +167,25 @@ export async function POST(req: NextRequest) {
     const COOKIE_MAX_AGE = 300;
 
     res.cookies.set({
-      name: 'ob',
-      value: '1',
+      name: "ob",
+      value: "1",
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: "lax",
       secure: true,
-      path: '/',
+      path: "/",
       maxAge: COOKIE_MAX_AGE,
     });
     res.cookies.set({
-      name: 'ob_addr',
+      name: "ob_addr",
       value: user.address.toLowerCase(),
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: "lax",
       secure: true,
-      path: '/',
+      path: "/",
       maxAge: COOKIE_MAX_AGE,
     });
 
-    fundUserWithUsdcVia0x(user.address as Address).catch((err) => {
-      console.error('[create-user] Swap/send USDC failed:', err);
-    });
+    // USDC is now funded directly in /api/fund-mon, so skip swap funding here
 
     if (createdUser.id) {
       try {
@@ -207,23 +204,23 @@ export async function POST(req: NextRequest) {
         const hash = await walletClient.writeContract({
           address: AML_ADDRESS,
           abi: AML_ABI,
-          functionName: 'award',
+          functionName: "award",
           args: [user.address as Address, BigInt(1000)],
         });
 
         publicClient
           .waitForTransactionReceipt({ hash })
-          .catch((e) => console.error('[create-user] award wait failed', e));
+          .catch((e) => console.error("[create-user] award wait failed", e));
       } catch (e) {
-        console.error('[create-user] award 1000 points failed:', e);
+        console.error("[create-user] award 1000 points failed:", e);
       }
     }
 
     return res;
   } catch (err) {
-    console.error('[POST /api/create-user] error:', err);
+    console.error("[POST /api/create-user] error:", err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
