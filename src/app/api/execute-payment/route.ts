@@ -111,7 +111,6 @@ export async function POST(req: NextRequest) {
     }
 
     const owner = user.address as `0x${string}`;
-
     const [allowance, balance] = await Promise.all([
       publicClient.readContract({
         address: USDC_ADDRESS,
