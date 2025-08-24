@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const serverBalance = await publicClient.getBalance({
       address: account.address,
     });
-    const threshold = BigInt(1e18); // 1 MON (18 decimals)
+    const threshold = BigInt(1e17); // 0.1 MON (18 decimals)
     if (serverBalance < threshold) {
       return NextResponse.json(
         {
@@ -93,13 +93,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Also try to fund up to 1 USDC directly from server wallet (no swap)
+    // Also try to fund up to 0.5 USDC directly from server wallet (no swap)
     let usdcFunded = false;
     let usdcTxHash: Hex | null = null;
     try {
       const usdc = ERC20_TOKENS.find((t) => t.symbol === "USDC");
       if (usdc) {
-        const oneUsdc = BigInt(10) ** BigInt(usdc.decimals);
+        const halfUsdc = BigInt(10) ** BigInt(usdc.decimals) / BigInt(2);
         const serverUsdcBalance = (await publicClient.readContract({
           address: usdc.address as Address,
           abi: erc20Abi,
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
           args: [account.address],
         })) as bigint;
         const amountToSend =
-          serverUsdcBalance >= oneUsdc ? oneUsdc : serverUsdcBalance;
+          serverUsdcBalance >= halfUsdc ? halfUsdc : serverUsdcBalance;
         if (amountToSend > BigInt(0)) {
           usdcTxHash = await wallet.writeContract({
             chain: undefined,
