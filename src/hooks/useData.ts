@@ -1,10 +1,9 @@
-// todo hi ignacio these are all the hooks that we're using for the data
-'use client';
+"use client";
 
-import React from 'react';
-import { fetchUserTransactions } from '@/lib/api';
-import type { UiTransaction, UiVault } from '@/lib/types';
-import { useAccount } from 'wagmi';
+import React from "react";
+import { fetchUserTransactions } from "@/lib/api";
+import type { UiTransaction, UiVault } from "@/lib/types";
+import { useAccount, usePublicClient } from "wagmi";
 
 type AsyncState<T> = {
   data: T | null;
@@ -44,9 +43,54 @@ function useAsync<T>(
 
 export function useUserTransactions(limit?: number, fromBlock?: number) {
   const { address } = useAccount();
-  return useAsync<UiTransaction[]>(
+  const publicClient = usePublicClient();
+
+  const baseState = useAsync<UiTransaction[]>(
     () => fetchUserTransactions(address, { limit, fromBlock }),
     [address, limit, fromBlock]
+  );
+  const [overrideData, setOverrideData] = React.useState<
+    UiTransaction[] | null
+  >(null);
+
+  React.useEffect(() => {
+    setOverrideData(null);
+  }, [address, limit, fromBlock]);
+
+  React.useEffect(() => {
+    if (!publicClient || !address) return;
+    const unwatch = publicClient.watchBlockNumber({
+      onBlockNumber: async () => {
+        try {
+          const freshData = await fetchUserTransactions(address, {
+            limit,
+            fromBlock,
+            fresh: true,
+          });
+          const prev = overrideData ?? baseState.data ?? [];
+          const changed =
+            prev.length !== freshData.length ||
+            prev[0]?.id !== freshData[0]?.id;
+          if (changed) setOverrideData(freshData);
+        } catch {
+          // ignore
+        }
+      },
+      emitOnBegin: false,
+      poll: true,
+    });
+    return () => {
+      unwatch?.();
+    };
+  }, [publicClient, address, limit, fromBlock, baseState.data, overrideData]);
+
+  return React.useMemo(
+    () => ({
+      data: (overrideData ?? baseState.data) as UiTransaction[] | null,
+      loading: baseState.loading,
+      error: baseState.error,
+    }),
+    [baseState.data, baseState.loading, baseState.error, overrideData]
   );
 }
 
@@ -57,11 +101,10 @@ export function useVaults() {
     if (!address) return [];
     const res = await fetch(
       `/api/vaults/details?address=${encodeURIComponent(address)}`,
-      { cache: 'no-store' }
+      { cache: "no-store" }
     );
     if (!res.ok) return [];
     const arr = (await res.json()) as UiVault[];
-    // De-duplicate by id guard
     const seen = new Set<string>();
     return arr.filter((v) => {
       const key = v.id.toLowerCase();
