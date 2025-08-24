@@ -33,7 +33,7 @@ export default function RevokeApprovals() {
     isConnected &&
       address &&
       SERVER_WALLET_ADDRESS &&
-      SERVER_WALLET_ADDRESS !== ""
+      String(SERVER_WALLET_ADDRESS).length > 0
   );
 
   const loadAllowances = useCallback(async () => {
