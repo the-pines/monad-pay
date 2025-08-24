@@ -2,12 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { erc20Abi } from "viem";
-import {
-  useAccount,
-  useConfig,
-  useReadContract,
-  useWriteContract,
-} from "wagmi";
+import { useAccount, useConfig, useWriteContract } from "wagmi";
 import { readContract } from "wagmi/actions";
 
 import { SERVER_WALLET_ADDRESS } from "@/config/contracts";
@@ -96,9 +91,7 @@ export default function RevokeApprovals() {
     for (const it of nonZero) {
       try {
         await revokeOne(it.token);
-      } catch {
-        // continue revoking others
-      }
+      } catch {}
     }
   }, [nonZero, revokeOne]);
 
