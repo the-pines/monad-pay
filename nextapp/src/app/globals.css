@@ -1,0 +1,244 @@
+@import "tailwindcss";
+
+:root {
+  --background: #200052;
+  --foreground: #fbfaf9;
+  --font-body: var(--font-satoshi, var(--font-inter-sans));
+  --font-display: var(--font-space-grotesk, var(--font-inter-sans));
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter-sans);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #200052;
+    --foreground: #fbfaf9;
+  }
+}
+
+/* Attempt to use locally-installed Satoshi if available */
+@font-face {
+  font-family: "Satoshi";
+  src: local("Satoshi Variable"), local("Satoshi");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Brand and surface tokens */
+:root {
+  --brand-accent: #8a76f9;
+  --card-surface: rgba(138, 118, 249, 0.1);
+  --card-surface-hover: rgba(138, 118, 249, 0.15);
+  --card-surface-active: rgba(138, 118, 249, 0.2);
+  --card-border: rgba(138, 118, 249, 0.25);
+}
+
+/* Subtle interactive gradient overlay for clickable elements */
+.interactive-gradient {
+  position: relative;
+  overflow: hidden;
+}
+.interactive-gradient::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+      120% 80% at 0% 0%,
+      rgba(255, 255, 255, 0.08),
+      transparent 60%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(138, 118, 249, 0.22),
+      rgba(183, 165, 255, 0.18)
+    );
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+}
+.interactive-gradient:hover::after {
+  opacity: 1;
+}
+.interactive-gradient:active::after {
+  opacity: 0.9;
+}
+
+/* Subtle reusable shadow for elevated surfaces */
+.soft-shadow {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Display font for headings and balances */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.display,
+.balance,
+.amount,
+.headline {
+  font-family: var(--font-display), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Arial, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Alias to support older class usage */
+.display-text {
+  font-family: var(--font-display), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Numeric emphasis */
+.tabular-nums {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ---------------------------
+   Dramatic shimmer/glisten
+   --------------------------- */
+
+@keyframes card-shimmer {
+  0% {
+    transform: translateX(-150%) skewX(20deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 0.5;
+  }
+  60% {
+    opacity: 0.5;
+  }
+  90% {
+    opacity: 0.25;
+  }
+  100% {
+    transform: translateX(150%) skewX(20deg);
+    opacity: 0;
+  }
+}
+
+.virtual-card {
+  position: relative;
+  overflow: hidden; /* ensures shimmer is clipped */
+  border-radius: 1rem; /* adjust to match your card design */
+  will-change: transform;
+  isolation: isolate; /* keeps shimmer contained */
+}
+
+/* Static soft highlight for depth */
+.virtual-card::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit; /* inherit rounded corners */
+  background: radial-gradient(
+    120% 80% at 0% 0%,
+    rgba(255, 255, 255, 0.08),
+    transparent 65%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Moving shimmer streak (paused by default) */
+.virtual-card::after {
+  content: "";
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -60%;
+  width: 75%;
+  border-radius: inherit; /* shimmer respects corners */
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  filter: blur(1px);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 1;
+
+  /* Run once when toggled */
+  animation: card-shimmer 2s ease-in-out;
+  animation-play-state: paused; /* key: don't run until triggered */
+}
+
+/* When we toggle this class in JS, the shimmer plays once */
+.virtual-card.shimmering::after {
+  animation-play-state: running;
+}
+
+/* Accessibility: disable for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .virtual-card::after {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+}
+
+/* Tiny wiggle animation for points button */
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: translateZ(0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translateZ(0) rotate(-0.6deg) scale(1.008);
+  }
+}
+
+/* Slide-in animation for list items */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Animated multi‑color gradient utilities */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animated-gradient {
+  background: linear-gradient(
+    120deg,
+    #8ec5ff 0%,
+    #8a76f9 30%,
+    #ff8a5b 60%,
+    #8a76f9 90%
+  );
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease-in-out infinite;
+}
