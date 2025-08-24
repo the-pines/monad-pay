@@ -10,9 +10,10 @@ export default function LogoutButton() {
   const router = useRouter();
 
   const logout = async () => {
-    // Navigate immediately; perform disconnect in background
-    router.replace("/");
-    void disconnect().catch(() => {});
+    try {
+      await disconnect();
+    } catch {}
+    router.replace("/login");
   };
 
   return (

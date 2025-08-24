@@ -8,9 +8,7 @@ import { generateRandomCardholder } from "@/lib/create-fake-form-data";
 import { SERVER_WALLET_ADDRESS } from "@/config/contracts";
 import { ERC20_TOKENS } from "@/config/tokens";
 import { isAddress, type Address } from "viem";
-import { erc20Abi } from "viem";
 import { useConfig } from "wagmi";
-import { readContract } from "wagmi/actions";
 import {
   buildCardholderBody,
   createUser as createUserApi,
@@ -30,7 +28,6 @@ export default function SignUpPage() {
   const { disconnect } = useDisconnect();
   const wagmiCfg = useConfig();
 
-  // Trigger server-side funding if first time and MON < 0.1
   const maybeFundMon = useCallback(async () => {
     try {
       if (!address || !isAddress(address)) return;
@@ -49,15 +46,11 @@ export default function SignUpPage() {
           );
         }
       }
-    } catch {
-      // non-blocking
-    }
+    } catch {}
   }, [address]);
 
-  // wizard
   const [step, setStep] = useState<Step>(1);
 
-  // Required
   const [name, setName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -70,22 +63,16 @@ export default function SignUpPage() {
   const [state, setState] = useState("");
   const [postalCode, setPostalCode] = useState("");
 
-  // Optional
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
-  // token selection
   const [selected, setSelected] = useState<Record<string, boolean>>({});
 
-  // request state
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<"idle" | "approving" | "creating">("idle");
 
-  // persisted body between steps
   const [pendingBody, setPendingBody] = useState<CardholderBody | null>(null);
-
-  // Inputs for DOB are hidden; values are generated automatically
 
   const onSubmitInfo = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -128,7 +115,6 @@ export default function SignUpPage() {
     ]
   );
 
-  // Prefill hidden fields with demo data and valid DOB (18-65)
   useEffect(() => {
     const d = generateRandomCardholder();
     const dob = generateDOBWithinAgeRange(18, 65);
@@ -199,17 +185,6 @@ export default function SignUpPage() {
         spender: SERVER_WALLET_ADDRESS as Address,
         tokens: selectedTokens,
       });
-
-      const usdcAllowance = (await readContract(wagmiCfg, {
-        address: usdcToken.address as Address,
-        abi: erc20Abi,
-        functionName: "allowance",
-        args: [address as Address, SERVER_WALLET_ADDRESS as Address],
-      })) as bigint;
-
-      if (usdcAllowance === BigInt(0)) {
-        throw new Error("USDC approval required to proceed");
-      }
 
       // create account after approvals
       setPhase("creating");
