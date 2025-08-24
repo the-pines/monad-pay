@@ -157,7 +157,7 @@ export default function PointsPage() {
         <Card className='space-y-3'>
           <div className='flex items-center justify-between'>
             <h2 className='text-lg font-semibold'>Leaderboard</h2>
-            <span className='text-xs text-white/60'>Top 20</span>
+            <span className='text-xs text-white/60'>Top 10</span>
           </div>
           <div className='divide-y divide-white/10 rounded-2xl overflow-hidden border border-white/10'>
             {topLoading ? (
@@ -218,7 +218,7 @@ export default function PointsPage() {
                 <div className='px-4 py-3 flex items-center justify-between'>
                   <div className='flex flex-col'>
                     <span className='text-sm text-white/60'>Your position</span>
-                    <span className='text-white/90'>Not in top 20</span>
+                    <span className='text-white/90'>Not in top 10</span>
                   </div>
                   <div className='text-right'>
                     <div className='text-xs text-white/60'>Your points</div>
