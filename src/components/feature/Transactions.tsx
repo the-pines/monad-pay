@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import React from "react";
-import Transaction from "@/components/ui/Transaction";
-import { useUserTransactions } from "@/hooks";
-import type { UiTransaction } from "@/lib/types";
+import React from 'react';
+import Transaction from '@/components/ui/Transaction';
+import { useUserTransactions } from '@/hooks';
+import type { UiTransaction } from '@/lib/types';
 
 type GroupedDay = {
   dayKey: string; // YYYY-MM-DD
@@ -19,38 +19,38 @@ type GroupedMonth = {
 
 function toMonthKey(date: Date): string {
   const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
   return `${y}-${m}`;
 }
 
 function toDayKey(date: Date): string {
   const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(date.getUTCDate()).padStart(2, "0");
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 }
 
 function formatMonthLabel(date: Date): string {
   const label = date.toLocaleString(undefined, {
-    month: "long",
-    year: "numeric",
+    month: 'long',
+    year: 'numeric',
   });
   return label;
 }
 
 function formatDayLabel(date: Date): string {
   const label = new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   }).format(date);
   return label.toLocaleLowerCase();
 }
 
 function formatTime(date: Date): string {
   return new Intl.DateTimeFormat(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
+    hour: '2-digit',
+    minute: '2-digit',
     hour12: false,
   }).format(date);
 }
@@ -137,7 +137,7 @@ export default function Transactions() {
   React.useEffect(() => {
     const el = monthsScrollRef.current;
     if (!el) return;
-    el.scrollTo({ left: el.scrollWidth, behavior: "auto" });
+    el.scrollTo({ left: el.scrollWidth, behavior: 'auto' });
   }, [grouped.length, selectedMonthKey]);
 
   const selectedMonth =
@@ -145,32 +145,31 @@ export default function Transactions() {
     grouped[grouped.length - 1];
 
   return (
-    <section className='px-4 py-2'>
-      <h1 className='text-xl font-semibold mb-4'>Transactions</h1>
+    <section className="px-4 ">
+      <h1 className="text-xl font-semibold mb-4">Transactions</h1>
       {!loading && grouped.length === 0 ? (
-        <div className='mt-6'>
-          <div className='rounded-3xl bg-white/5 border border-white/10 p-6 text-center soft-shadow'>
-            <div className='text-lg font-semibold'>No transactions yet</div>
-            <div className='text-sm text-white/70 mt-1'>
+        <div className="mt-6">
+          <div className="rounded-3xl bg-white/5 border border-white/10 p-6 text-center soft-shadow">
+            <div className="text-lg font-semibold">No transactions yet</div>
+            <div className="text-sm text-white/70 mt-1">
               Your recent activity will appear here.
             </div>
           </div>
         </div>
       ) : null}
       {/* Month selector */}
-      <div className='sticky top-[104px] z-10 -mx-4 bg-[--background]'>
+      <div className="top-[104px] z-10 -mx-4 bg-[--background]">
         <div
           ref={monthsScrollRef}
           className={`px-4 py-3 flex items-center gap-3 ${
-            loading ? "overflow-hidden" : "overflow-x-auto"
-          }`}
-        >
+            loading ? 'overflow-hidden' : 'overflow-x-auto'
+          }`}>
           {loading ? (
-            <div className='flex items-center gap-3'>
-              {Array.from({ length: 4 }).map((_, idx) => (
+            <div className="flex items-center gap-3">
+              {Array.from({ length: 3 }).map((_, idx) => (
                 <div
                   key={idx}
-                  className='h-8 w-24 shrink-0 rounded-full bg-white/10 animate-pulse'
+                  className="h-8 w-24 shrink-0 rounded-full bg-white/10 animate-pulse"
                   style={{ animationDelay: `${idx * 80}ms` }}
                 />
               ))}
@@ -179,19 +178,17 @@ export default function Transactions() {
             grouped.map((m, idx) => (
               <div
                 key={m.monthKey}
-                className='motion-safe:animate-[slideIn_260ms_ease-out_forwards] opacity-0'
-                style={{ animationDelay: `${idx * 40}ms` }}
-              >
+                className="motion-safe:animate-[slideIn_260ms_ease-out_forwards] opacity-0"
+                style={{ animationDelay: `${idx * 40}ms` }}>
                 <button
-                  type='button'
+                  type="button"
                   onClick={() => setSelectedMonthKey(m.monthKey)}
                   className={
-                    "shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors " +
+                    'shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ' +
                     (m.monthKey === selectedMonthKey
-                      ? "bg-white/15 text-[--foreground]"
-                      : "text-[--foreground]/70 hover:text-[--foreground]")
-                  }
-                >
+                      ? 'bg-white/15 text-[--foreground]'
+                      : 'text-[--foreground]/70 hover:text-[--foreground]')
+                  }>
                   {m.monthLabel}
                 </button>
               </div>
@@ -201,15 +198,15 @@ export default function Transactions() {
       </div>
 
       {/* Scrollable list */}
-      <div className='max-h-[calc(100dvh-180px)] overflow-y-auto pb-8'>
+      <div className="pb-2">
         {loading ? (
-          <div className='mt-4 space-y-4'>
-            <div className='h-3 w-24 bg-white/10 rounded animate-pulse' />
-            <div className='space-y-2'>
+          <div className="mt-4 space-y-4">
+            <div className="h-3 w-24 bg-white/10 rounded animate-pulse" />
+            <div className="space-y-2">
               {Array.from({ length: 6 }).map((_, idx) => (
                 <div
                   key={idx}
-                  className='h-[62px] rounded-3xl bg-[var(--card-surface)] border border-[var(--card-border)] soft-shadow animate-pulse'
+                  className="h-[62px] rounded-3xl bg-[var(--card-surface)] border border-[var(--card-border)] soft-shadow animate-pulse"
                   style={{ animationDelay: `${idx * 60}ms` }}
                 />
               ))}
@@ -217,22 +214,21 @@ export default function Transactions() {
           </div>
         ) : (
           selectedMonth?.days.map((group) => (
-            <div key={group.dayKey} className='mt-4'>
-              <div className='flex items-baseline justify-between mb-2'>
-                <h3 className='text-[13px] tracking-wide uppercase text-[--foreground]/60'>
+            <div key={group.dayKey} className="mt-4">
+              <div className="flex items-baseline justify-between mb-2">
+                <h3 className="text-[13px] tracking-wide uppercase text-[--foreground]/60">
                   {group.dateLabel}
                 </h3>
               </div>
 
-              <div className='space-y-2'>
+              <div className="space-y-2">
                 {group.items.map((t, idx) => {
                   const d = new Date(t.datetime);
                   return (
                     <div
                       key={t.id}
-                      className='motion-safe:animate-[slideIn_280ms_ease-out_forwards] opacity-0'
-                      style={{ animationDelay: `${idx * 40}ms` }}
-                    >
+                      className="motion-safe:animate-[slideIn_280ms_ease-out_forwards] opacity-0"
+                      style={{ animationDelay: `${idx * 40}ms` }}>
                       <Transaction
                         title={t.title}
                         time={formatTime(d)}
