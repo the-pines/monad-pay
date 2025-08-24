@@ -36,7 +36,7 @@ export const users = pgTable('users', {
 // prettier-ignore
 export const transfers = pgTable('transfers', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id),
+  userId: uuid('user_id').notNull().references(() => users.id, {onDelete: "cascade"}),
   symbol: text('symbol').notNull(),
   amount: numeric('amount', { precision: 78, scale: 0 }).notNull(),
   decimals: integer('decimals').notNull(),
