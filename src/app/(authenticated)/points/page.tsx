@@ -165,7 +165,7 @@ export default function PointsPage() {
             ) : top.length === 0 ? (
               <div className='p-4 text-white/70'>No entries yet.</div>
             ) : (
-              top.map((entry, idx) => {
+              top.slice(0, 10).map((entry, idx) => {
                 const rank = idx + 1;
                 const isMe =
                   address && entry.user.toLowerCase() === address.toLowerCase();
@@ -233,7 +233,7 @@ export default function PointsPage() {
 
           <p className='text-xs text-white/60'>
             The person at the Mobil3 hackathon with the highest number of points
-            by Sunday 6pm will receive a special prize.
+            by Sunday evening will receive a special prize 🎁
           </p>
         </Card>
 
