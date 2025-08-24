@@ -9,11 +9,10 @@ import {
   useState,
 } from 'react';
 import { erc20Abi, formatUnits } from 'viem';
-import { useBalance, usePublicClient } from 'wagmi';
+import { usePublicClient } from 'wagmi';
 
 type User = {
   name: string;
-  balance: string;
   card: {
     displayName: string;
     expiry: string;
@@ -35,6 +34,7 @@ type Portfolio = Array<Token>;
 interface UserContext {
   user: User;
   portfolio: Portfolio;
+  balance: string;
   isFetchingUser: boolean;
   isFetchingPortfolio: boolean;
 }
@@ -42,7 +42,6 @@ interface UserContext {
 const initialValue = {
   user: {
     name: '',
-    balance: '',
     card: {
       displayName: '',
       expiry: '',
@@ -50,6 +49,7 @@ const initialValue = {
       cvc: '',
     },
   },
+  balance: '',
   portfolio: [],
   isFetchingUser: false,
   isFetchingPortfolio: false,
@@ -58,11 +58,13 @@ const initialValue = {
 const UserContext = createContext<UserContext>(initialValue);
 
 const USER_CACHE: Record<string, User> = {};
+let BALANCE_CACHE: string = '0';
 
 const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User>(initialValue.user);
   const [isFetchingUser, setIsFetchingUser] = useState<boolean>(false);
 
+  const [balance, setBalance] = useState<string>(BALANCE_CACHE);
   const [portfolio, setPortfolio] = useState<Portfolio>(initialValue.portfolio);
   const [isFetchingPortfolio, setIsFetchingPortfolio] = useState<boolean>(false); //prettier-ignore
 
@@ -153,10 +155,13 @@ const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         });
       });
 
-      const totalUsd = items.reduce((s, it) => s + it.amountUsd, 0);
+      const totalUsd = String(
+        items.reduce((s, it) => s + it.amountUsd, 0).toFixed(2)
+      );
 
+      BALANCE_CACHE = totalUsd;
+      setBalance(totalUsd);
       setPortfolio(items);
-      setUser((prev) => ({ ...prev, balance: totalUsd.toFixed(2) }));
     } catch (err) {
       console.log(err);
     } finally {
@@ -173,7 +178,7 @@ const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   return (
     <UserContext.Provider
-      value={{ user, portfolio, isFetchingUser, isFetchingPortfolio }}>
+      value={{ user, balance, portfolio, isFetchingUser, isFetchingPortfolio }}>
       {children}
     </UserContext.Provider>
   );

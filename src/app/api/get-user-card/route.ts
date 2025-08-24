@@ -58,7 +58,6 @@ export async function POST(req: NextRequest) {
 
     const user = {
       name: dbUser.name,
-      balance: dbUser.balance,
       card: {
         displayName: stripeCard.cardholder.name,
         expiry: `${stripeCard.exp_month}/${stripeCard.exp_year}`,

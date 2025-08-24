@@ -7,14 +7,12 @@ import RecentTransactions from '@/components/feature/Home/RecentTransactions';
 import RedeemPointsNearby from './RedeemPointsNearby';
 
 export default function Home() {
-  const { user, portfolio } = useUser();
-
-  console.log(portfolio);
+  const { user, balance } = useUser();
 
   return (
     <section className="relative p-5">
       <div className="text-[#FBFAF9] font-extrabold text-[36px] leading-[44px] tracking-[-0.02em]">
-        ${user.balance}
+        ${balance}
       </div>
 
       <div className="mt-7 flex justify-center">
