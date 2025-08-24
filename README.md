@@ -72,14 +72,14 @@ cp.env.example.env;
 NEXT_PUBLIC_MONADPAY_COMPANY_WALLET_ADDRESS = 0x0;
 DATABASE_URL =
   NEXT_PUBLIC_BASE_URL =
-  NEXT_PUBLIC_PROJECT_ID =
+  NEXT_PUBLIC_REOW_PROJECT_ID =
   NEXT_PUBLIC_VAULT_FACTORY_ADDRESS =
     0x4ae653259b7fbbb2c666d77cbd6279fc3534d966;
 ```
 
 ### Reown
 
-We use Reown for our wallet connections. You will need to set up with Reown and get a Project ID to set as `NEXT_PUBLIC_PROJECT_ID`
+We use Reown for our wallet connections. You will need to set up with Reown and get a Project ID to set as `NEXT_PUBLIC_REOW_PROJECT_ID`
 
 ### Postgres database
 

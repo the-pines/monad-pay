@@ -9,7 +9,7 @@ export const wagmiAdapter = new WagmiAdapter({
     storage: cookieStorage,
   }),
   ssr: true,
-  projectId: process.env.NEXT_PUBLIC_PROJECT_ID!,
+  projectId: process.env.NEXT_PUBLIC_REOW_PROJECT_ID!,
   networks,
 });
 

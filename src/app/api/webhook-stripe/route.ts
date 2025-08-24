@@ -100,6 +100,25 @@ export async function POST(req: NextRequest) {
       })
       .where(eq(payments.id, existing.id));
 
+    if (auth.approved) {
+      try {
+        const base = `${process.env.NEXT_PUBLIC_BASE_URL}/api/execute-payment`;
+        const execRes = await fetch(base, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentId: existing.id }),
+          cache: 'no-store',
+        });
+
+        if (!execRes.ok) {
+          const text = await execRes.text().catch(() => '');
+          console.error('[execute-payment] non-200', execRes.status, text);
+        }
+      } catch (e) {
+        console.error('[execute-payment] call failed', e);
+      }
+    }
+
     return new Response('ok', { status: 200 });
   }
 

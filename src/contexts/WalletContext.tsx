@@ -9,7 +9,7 @@ import { cookieToInitialState, WagmiProvider } from 'wagmi';
 
 createAppKit({
   adapters: [wagmiAdapter],
-  projectId: process.env.NEXT_PUBLIC_PROJECT_ID!,
+  projectId: process.env.NEXT_PUBLIC_REOW_PROJECT_ID!,
   networks: [monadTestnet],
   defaultNetwork: monadTestnet,
   metadata: {

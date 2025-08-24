@@ -1,5 +1,5 @@
-import { createPublicClient, createWalletClient, http } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { createPublicClient, createWalletClient, http } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import {
   type Address,
   type Hex,
@@ -7,24 +7,24 @@ import {
   numberToHex,
   size,
   erc20Abi,
-} from "viem";
+} from 'viem';
 
-import { ERC20_TOKENS } from "@/config/tokens";
+import { ERC20_TOKENS } from '@/config/tokens';
 
-const ZEROEX_API_BASE_URL = "https://api.0x.org";
+const ZEROEX_API_BASE_URL = 'https://api.0x.org';
 const ZEROX_API_KEY = process.env.ZEROX_API_KEY;
 const MONAD_RPC_URL = process.env.MONAD_RPC_URL;
-const SERVER_WALLET_PK = process.env.SERVER_WALLET_PRIVATE_KEY;
+const SERVER_WALLET_PK = process.env.EXECUTOR_PRIVATE_KEY;
 
-const NATIVE_TOKEN_PLACEHOLDER = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+const NATIVE_TOKEN_PLACEHOLDER = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 
 export async function fundUserWithUsdcVia0x(userAddr: Address): Promise<void> {
   try {
     if (!MONAD_RPC_URL || !SERVER_WALLET_PK) return;
 
-    const pk = SERVER_WALLET_PK.startsWith("0x")
+    const pk = SERVER_WALLET_PK.startsWith('0x')
       ? (SERVER_WALLET_PK as Hex)
-      : (("0x" + SERVER_WALLET_PK) as Hex);
+      : (('0x' + SERVER_WALLET_PK) as Hex);
     const account = privateKeyToAccount(pk);
     const wallet = createWalletClient({
       account,
@@ -32,15 +32,15 @@ export async function fundUserWithUsdcVia0x(userAddr: Address): Promise<void> {
     });
     const publicClient = createPublicClient({ transport: http(MONAD_RPC_URL) });
 
-    const usdc = ERC20_TOKENS.find((t) => t.symbol === "USDC");
+    const usdc = ERC20_TOKENS.find((t) => t.symbol === 'USDC');
     if (!usdc) return;
 
     const oneUsdc = BigInt(10) ** BigInt(usdc.decimals);
     const chainId = await publicClient.getChainId();
 
-    const headers: Record<string, string> = { "0x-version": "v2" };
-    if (ZEROX_API_KEY) headers["0x-api-key"] = ZEROX_API_KEY;
-    const base = ZEROEX_API_BASE_URL.replace(/\/$/, "");
+    const headers: Record<string, string> = { '0x-version': 'v2' };
+    if (ZEROX_API_KEY) headers['0x-api-key'] = ZEROX_API_KEY;
+    const base = ZEROEX_API_BASE_URL.replace(/\/$/, '');
 
     // get the amount of MON to sell to get 1 USDC
     // TODO probably a better way to do this
@@ -56,7 +56,7 @@ export async function fundUserWithUsdcVia0x(userAddr: Address): Promise<void> {
     const priceRes1 = await fetch(
       `${base}/swap/permit2/price?${priceParams1.toString()}`,
       {
-        cache: "no-store",
+        cache: 'no-store',
         headers,
       }
     );
@@ -74,12 +74,12 @@ export async function fundUserWithUsdcVia0x(userAddr: Address): Promise<void> {
       sellToken: NATIVE_TOKEN_PLACEHOLDER,
       sellAmount: sellAmount.toString(),
       taker: account.address,
-      slippagePercentage: "0.01",
+      slippagePercentage: '0.01',
     });
     const quoteRes = await fetch(
       `${base}/swap/permit2/quote?${quoteParams.toString()}`,
       {
-        cache: "no-store",
+        cache: 'no-store',
         headers,
       }
     );
@@ -114,8 +114,8 @@ export async function fundUserWithUsdcVia0x(userAddr: Address): Promise<void> {
       chain: undefined,
       to: txTo,
       data: txData,
-      value: typeof rawValue === "string" ? BigInt(rawValue) : undefined,
-      gas: typeof rawGas === "string" ? BigInt(rawGas) : undefined,
+      value: typeof rawValue === 'string' ? BigInt(rawValue) : undefined,
+      gas: typeof rawGas === 'string' ? BigInt(rawGas) : undefined,
     });
     await publicClient.waitForTransactionReceipt({ hash: swapHash });
 
@@ -123,7 +123,7 @@ export async function fundUserWithUsdcVia0x(userAddr: Address): Promise<void> {
     const serverUsdcBalance = (await publicClient.readContract({
       address: usdc.address as Address,
       abi: erc20Abi,
-      functionName: "balanceOf",
+      functionName: 'balanceOf',
       args: [account.address],
     })) as bigint;
 
@@ -135,11 +135,11 @@ export async function fundUserWithUsdcVia0x(userAddr: Address): Promise<void> {
       chain: undefined,
       address: usdc.address as Address,
       abi: erc20Abi,
-      functionName: "transfer",
+      functionName: 'transfer',
       args: [userAddr, amountToSend],
     });
     await publicClient.waitForTransactionReceipt({ hash: transferHash });
   } catch (err) {
-    console.error("Swapping error:", err);
+    console.error('Swapping error:', err);
   }
 }
