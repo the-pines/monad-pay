@@ -10,7 +10,8 @@ export type TransactionProps = {
   title: string;
   time: string;
   note?: string;
-  amountPrimary: number;
+  tokenSymbol?: string;
+  tokenAmount?: number;
   amountUsd?: number;
   direction: "in" | "out";
   onClick?: () => void;
@@ -20,7 +21,8 @@ export default function Transaction({
   title,
   time,
   note,
-  amountPrimary,
+  tokenSymbol,
+  tokenAmount,
   amountUsd,
   direction,
   onClick,
@@ -39,11 +41,18 @@ export default function Transaction({
       useGrouping: true,
     });
 
+  const formatToken = (value: number) =>
+    value.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: true,
+    });
+
   const accentBg = isApproval
     ? "bg-blue-400/25"
     : direction === "in"
     ? "bg-[#1DE9B6]/25"
-    : "bg-[#FF5CAA]/25"; // turquoise / pink
+    : "bg-[#FF5CAA]/25";
   const accentIcon = isApproval
     ? "text-blue-300"
     : direction === "in"
@@ -52,7 +61,7 @@ export default function Transaction({
 
   return (
     <button
-      type="button"
+      type='button'
       onClick={onClick}
       className={`w-full text-left rounded-3xl bg-[var(--card-surface)] hover:bg-[var(--card-surface-hover)] active:bg-[var(--card-surface-active)] transition-colors px-4 py-3 flex items-center gap-3 soft-shadow border border-[var(--card-border)] interactive-gradient`}
     >
@@ -62,33 +71,35 @@ export default function Transaction({
         <Icon className={`h-6 w-6 ${accentIcon}`} />
       </span>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <div className="truncate font-semibold text-[15px] leading-5 text-[--foreground]">
+      <div className='min-w-0 flex-1'>
+        <div className='flex items-center gap-2'>
+          <div className='truncate font-semibold text-[15px] leading-5 text-[--foreground]'>
             {title}
           </div>
           {isApproval ? (
-            <Badge size="sm" intent="info">
+            <Badge size='sm' intent='info'>
               Approval
             </Badge>
           ) : (
-            <Badge size="sm" intent={direction === "in" ? "success" : "danger"}>
+            <Badge size='sm' intent={direction === "in" ? "success" : "danger"}>
               {direction === "in" ? "Received" : "Sent"}
             </Badge>
           )}
         </div>
-        <div className="mt-0.5 text-xs text-[--foreground]/70">
+        <div className='mt-0.5 text-xs text-[--foreground]/70'>
           <span>{time}</span>
           {note ? <span> · {note}</span> : null}
         </div>
       </div>
 
-      <div className="text-right">
-        <div className="amount font-semibold tabular-nums text-[15px] leading-5 text-[--foreground]">
-          {`MXN ${formatNumber(amountPrimary)}`}
-        </div>
-        {amountUsd !== undefined ? (
-          <div className="amount mt-0.5 text-xs tabular-nums text-[--foreground]/70">
+      <div className='text-right'>
+        {tokenAmount !== undefined && tokenAmount > 0 ? (
+          <div className='amount font-semibold tabular-nums text-[15px] leading-5 text-[--foreground]'>
+            {`${formatToken(tokenAmount)} ${tokenSymbol ?? ""}`.trim()}
+          </div>
+        ) : null}
+        {amountUsd !== undefined && amountUsd > 0 ? (
+          <div className='amount mt-0.5 text-xs tabular-nums text-[--foreground]/70'>
             {`${formatNumber(amountUsd)} USD`}
           </div>
         ) : null}

@@ -1,4 +1,5 @@
-import { ERC20_TOKENS, TOKEN_USD_PRICE } from '@/config/tokens';
+import { ERC20_TOKENS } from '@/config/tokens';
+import { getUsdPricesForSymbols } from '@/lib/prices';
 import { useAppKitAccount } from '@reown/appkit/react';
 import {
   createContext,
@@ -116,13 +117,12 @@ const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
       const items: Portfolio = [];
       if (nativeAmount > 0) {
-        const price = TOKEN_USD_PRICE['MON'] ?? 0;
         items.push({
           symbol: 'MON',
           name: 'Monad',
           decimals: 18,
           amount: nativeAmount,
-          amountUsd: nativeAmount * price,
+          amountUsd: 0,
         });
       }
 
@@ -145,15 +145,22 @@ const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         const amount = parseFloat(formatUnits(bal, t.decimals));
         if (amount <= 0) return;
 
-        const price = TOKEN_USD_PRICE[t.symbol] ?? 0;
         items.push({
           symbol: t.symbol,
           name: t.name,
           decimals: t.decimals,
           amount,
-          amountUsd: amount * price,
+          amountUsd: 0,
         });
       });
+
+      // Fetch dynamic prices via 0x-backed oracle
+      const symbols = Array.from(new Set(items.map((i) => i.symbol)));
+      const prices = await getUsdPricesForSymbols(symbols);
+      for (const it of items) {
+        const p = prices[it.symbol.toUpperCase()];
+        if (p && Number.isFinite(p)) it.amountUsd = it.amount * p;
+      }
 
       const totalUsd = String(
         items.reduce((s, it) => s + it.amountUsd, 0).toFixed(2)

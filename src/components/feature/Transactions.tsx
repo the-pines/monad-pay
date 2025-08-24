@@ -133,7 +133,6 @@ export default function Transactions() {
     }
   }, [grouped, selectedMonthKey]);
 
-  // Ensure the horizontal month selector is scrolled to the end (latest)
   React.useEffect(() => {
     const el = monthsScrollRef.current;
     if (!el) return;
@@ -232,7 +231,8 @@ export default function Transactions() {
                       <Transaction
                         title={t.title}
                         time={formatTime(d)}
-                        amountPrimary={t.amountPrimary}
+                        tokenSymbol={t.tokenSymbol}
+                        tokenAmount={t.tokenAmount}
                         amountUsd={t.amountUsd}
                         direction={t.direction}
                       />

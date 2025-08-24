@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
-import { ERC20_TOKENS, TOKEN_USD_PRICE } from "@/config/tokens";
+import { ERC20_TOKENS } from "@/config/tokens";
+import { getUsdPriceForSymbol } from "@/lib/prices";
 
 const ENVIO_URL = process.env.ENVIO_URL;
-const USD_TO_MXN = Number(process.env.USD_TO_MXN ?? "17.00");
 const HIDE_TO_ADDRESS =
   "0xDCaa4667Bf4a8383D02B2Fb95a824778993BB99D".toLowerCase();
 const TRANSFER_TOPIC =
@@ -18,9 +18,12 @@ function toNumber(raw: string, decimals: number): number {
   return bn / 10 ** decimals;
 }
 
-function toUsd(amount: number, symbol: string): number | undefined {
-  const price = TOKEN_USD_PRICE[symbol];
-  if (!price) return undefined;
+async function toUsd(
+  amount: number,
+  symbol: string
+): Promise<number | undefined> {
+  const price = await getUsdPriceForSymbol(symbol);
+  if (!price || !Number.isFinite(price)) return undefined;
   return amount * price;
 }
 
@@ -165,14 +168,11 @@ export async function GET(req: NextRequest) {
             !isZeroValue(t.value) &&
             (t.to || "").toLowerCase() !== HIDE_TO_ADDRESS
         )
-        .map((t) => {
+        .map(async (t) => {
           const isOut = (t.from || "").toLowerCase() === address.toLowerCase();
           const amountMon = toNumber(String(t.value ?? "0"), 18);
-          const amountUsd = toUsd(amountMon, "MON") ?? toUsd(amountMon, "WMON");
-          const amountPrimary =
-            amountUsd !== undefined
-              ? amountUsd * USD_TO_MXN
-              : amountMon * USD_TO_MXN;
+          const usd =
+            (await toUsd(amountMon, "MON")) ?? (await toUsd(amountMon, "WMON"));
           const blockTsSec = blockNumberToTimestamp.get(Number(t.block_number));
           const datetime = blockTsSec
             ? new Date(blockTsSec * 1000).toISOString()
@@ -181,8 +181,9 @@ export async function GET(req: NextRequest) {
             id: `${t.hash}`,
             title: isOut ? "Sent MON" : "Received MON",
             note: isOut ? t.to || undefined : t.from,
-            amountPrimary,
-            amountUsd: amountUsd ?? undefined,
+            tokenSymbol: "MON",
+            tokenAmount: amountMon,
+            amountUsd: usd ?? undefined,
             direction: isOut ? "out" : "in",
             datetime,
           };
@@ -192,43 +193,46 @@ export async function GET(req: NextRequest) {
         ERC20_TOKENS.map((t) => [t.address.toLowerCase(), t])
       );
 
-      const erc20 = logs
-        .filter((l) => l.topic0 === TRANSFER_TOPIC)
-        .map((l) => {
-          const fromAddr = topicToAddress(l.topic1)?.toLowerCase();
-          const toAddr = topicToAddress(l.topic2)?.toLowerCase();
-          const isOut = fromAddr === address.toLowerCase();
-          const token = knownErc20ByAddress.get(l.address.toLowerCase());
-          const decimals = token?.decimals ?? 18;
-          const symbol = token?.symbol ?? "TOKEN";
-          const raw = l.data ?? ("0x0" as `0x${string}`);
-          let amount = 0;
-          try {
-            amount = Number(BigInt(raw)) / 10 ** decimals;
-          } catch {
-            amount = 0;
-          }
-          if (amount === 0) return null;
-          const amountUsd = toUsd(amount, symbol);
-          const amountPrimary =
-            amountUsd !== undefined
-              ? amountUsd * USD_TO_MXN
-              : amount * USD_TO_MXN;
-          const blockTsSec = blockNumberToTimestamp.get(Number(l.block_number));
-          const datetime = blockTsSec
-            ? new Date(blockTsSec * 1000).toISOString()
-            : new Date().toISOString();
-          return {
-            id: `${l.block_number}-${l.log_index}-erc20`,
-            title: `${isOut ? "Sent" : "Received"} ${symbol}`,
-            note: isOut ? toAddr : fromAddr,
-            amountPrimary,
-            amountUsd: amountUsd ?? undefined,
-            direction: isOut ? "out" : "in",
-            datetime,
-          };
-        })
-        .filter((x): x is NonNullable<typeof x> => Boolean(x));
+      const erc20 = await Promise.all(
+        logs
+          .filter((l) => l.topic0 === TRANSFER_TOPIC)
+          .map(async (l) => {
+            const fromAddr = topicToAddress(l.topic1)?.toLowerCase();
+            const toAddr = topicToAddress(l.topic2)?.toLowerCase();
+            const isOut = fromAddr === address.toLowerCase();
+            const token = knownErc20ByAddress.get(l.address.toLowerCase());
+            const decimals = token?.decimals ?? 18;
+            const symbol = token?.symbol ?? "TOKEN";
+            const raw = l.data ?? ("0x0" as `0x${string}`);
+            let amount = 0;
+            try {
+              amount = Number(BigInt(raw)) / 10 ** decimals;
+            } catch {
+              amount = 0;
+            }
+            if (amount === 0) return null;
+            const amountUsd = await toUsd(amount, symbol);
+            const blockTsSec = blockNumberToTimestamp.get(
+              Number(l.block_number)
+            );
+            const datetime = blockTsSec
+              ? new Date(blockTsSec * 1000).toISOString()
+              : new Date().toISOString();
+            return {
+              id: `${l.block_number}-${l.log_index}-erc20`,
+              title: `${isOut ? "Sent" : "Received"} ${symbol}`,
+              note: isOut ? toAddr : fromAddr,
+              tokenSymbol: symbol,
+              tokenAmount: amount,
+              amountUsd: amountUsd ?? undefined,
+              direction: isOut ? "out" : "in",
+              datetime,
+            };
+          })
+      );
+      const erc20Filtered = erc20.filter((x): x is NonNullable<typeof x> =>
+        Boolean(x)
+      );
 
       const approvals = logs
         .filter((l) => l.topic0 === APPROVAL_TOPIC)
@@ -239,27 +243,25 @@ export async function GET(req: NextRequest) {
           const token = knownErc20ByAddress.get(l.address.toLowerCase());
           const symbol = token?.symbol ?? "TOKEN";
           const raw = l.data ?? ("0x0" as `0x${string}`);
-          const unlimited = isMaxUint256Hex(raw);
           const amountUsd = undefined as number | undefined;
-          const amountPrimary = 0;
           const blockTsSec = blockNumberToTimestamp.get(Number(l.block_number));
           const datetime = blockTsSec
             ? new Date(blockTsSec * 1000).toISOString()
             : new Date().toISOString();
           return {
             id: `${l.block_number}-${l.log_index}-approval`,
-            title: isOut
-              ? `Approved ${symbol}${unlimited ? " (unlimited)" : ""}`
-              : `Received approval ${symbol}${unlimited ? " (unlimited)" : ""}`,
+            title: isOut ? `Approved ${symbol}` : `Received approval ${symbol}`,
             note: isOut ? spenderAddr : ownerAddr,
-            amountPrimary,
+            tokenSymbol: symbol,
+            tokenAmount: 0,
             amountUsd: amountUsd ?? undefined,
             direction: isOut ? "out" : "in",
             datetime,
           };
         });
 
-      const sorted = [...native, ...erc20, ...approvals].sort(
+      const nativeResolved = await Promise.all(native);
+      const sorted = [...nativeResolved, ...erc20Filtered, ...approvals].sort(
         (a, b) =>
           new Date(b.datetime).getTime() - new Date(a.datetime).getTime()
       );

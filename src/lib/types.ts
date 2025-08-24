@@ -2,9 +2,10 @@ export type UiTransaction = {
   id: string;
   title: string;
   note?: string;
-  amountPrimary: number; // currency amount in primary currency
-  amountUsd?: number; // converted USD amount
-  direction: 'in' | 'out';
+  tokenSymbol?: string; // e.g., MON, USDC
+  tokenAmount?: number; // raw token amount (not fiat)
+  amountUsd?: number; // USD value for the token amount
+  direction: "in" | "out";
   datetime: string; // ISO 8601
 };
 
