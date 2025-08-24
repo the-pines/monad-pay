@@ -288,7 +288,12 @@ export default function SignUpPage() {
                     id='name'
                     value={name}
                     required
-                    onChange={(e) => setName(e.target.value)}
+                    maxLength={24}
+                    pattern='[A-Za-z]+'
+                    title='Letters only (A–Z). No numbers or special characters.'
+                    onChange={(e) =>
+                      setName(e.target.value.replace(/[^A-Za-z]/g, ""))
+                    }
                     className='w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30'
                     placeholder='MonadRox'
                   />
@@ -305,7 +310,11 @@ export default function SignUpPage() {
                     <input
                       value={firstName}
                       required
-                      onChange={(e) => setFirstName(e.target.value)}
+                      pattern='[A-Za-z]+'
+                      title='Letters only (A–Z). No numbers or special characters.'
+                      onChange={(e) =>
+                        setFirstName(e.target.value.replace(/[^A-Za-z]/g, ""))
+                      }
                       className='w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30'
                       placeholder='Alex'
                     />
@@ -317,7 +326,11 @@ export default function SignUpPage() {
                     <input
                       value={lastName}
                       required
-                      onChange={(e) => setLastName(e.target.value)}
+                      pattern='[A-Za-z]+'
+                      title='Letters only (A–Z). No numbers or special characters.'
+                      onChange={(e) =>
+                        setLastName(e.target.value.replace(/[^A-Za-z]/g, ""))
+                      }
                       className='w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30'
                       placeholder='Johnson'
                     />
