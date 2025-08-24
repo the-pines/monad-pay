@@ -18,8 +18,6 @@ const AttachVaultBody = z.object({
     .transform((s) => s.trim().toLowerCase()),
 });
 
-// Attach an existing vault (owned by someone else) to the current user, and
-// add the user as a collaborator on the owner's vault record if present.
 export async function POST(req: NextRequest) {
   try {
     const json = await req.json();
@@ -33,7 +31,6 @@ export async function POST(req: NextRequest) {
 
     const { creator, vaultAddress } = parsed.data;
 
-    // Ensure contributor user exists
     let contributor = await db.query.users.findFirst({
       where: eq(users.address, creator),
     });
@@ -58,7 +55,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Look up any existing vault rows for this address
     const existingForAddress = await db.query.vaults.findMany({
       where: eq(vaults.address, vaultAddress),
     });
@@ -69,7 +65,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Ensure mapping exists for contributor
     const existingContributorMap = await db.query.vaults.findFirst({
       where: and(
         eq(vaults.userId, contributor.id),
@@ -86,7 +81,6 @@ export async function POST(req: NextRequest) {
       contributorMap = inserted[0] ?? null;
     }
 
-    // Add contributor address to collaborators for any rows not owned by them
     for (const row of existingForAddress) {
       if (row.userId === contributor.id) continue;
       const current = row.collaborators ?? [];

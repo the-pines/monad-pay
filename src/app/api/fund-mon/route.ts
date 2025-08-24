@@ -7,7 +7,7 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 const MONAD_RPC_URL = process.env.MONAD_RPC_URL;
-const SERVER_WALLET_PK = process.env.SERVER_WALLET_PRIVATE_KEY;
+const SERVER_WALLET_PK = process.env.EXECUTOR_PRIVATE_KEY;
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +19,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid address" }, { status: 400 });
     }
 
-    // Only for first-time sign-in: skip if user already exists
     const existing = await db.query.users.findFirst({
       where: eq(users.address, addr),
     });
@@ -47,7 +46,6 @@ export async function POST(req: NextRequest) {
       transport: http(MONAD_RPC_URL),
     });
 
-    // Check server wallet balance first
     const serverBalance = await publicClient.getBalance({
       address: account.address,
     });
@@ -64,7 +62,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check user balance
     const balance = await publicClient.getBalance({ address: addr as Address });
     if (balance >= threshold) {
       return NextResponse.json(
@@ -73,15 +70,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Send flat 0.1 MON
+    // Send 0.1 MON
     const value = threshold;
     try {
       const hash = await wallet.sendTransaction({
         to: addr as Address,
         value,
-        // Explicit chain field to satisfy types when client is created without a chain
         chain: undefined,
       });
+      await publicClient.waitForTransactionReceipt({ hash });
       return NextResponse.json({ funded: true, txHash: hash }, { status: 200 });
     } catch (sendErr) {
       console.error("[fund-mon] sendTransaction failed:", sendErr);

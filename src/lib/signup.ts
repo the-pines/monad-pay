@@ -1,9 +1,13 @@
-import { readContract, writeContract } from 'wagmi/actions';
-import { maxUint256, type Address } from 'viem';
+import {
+  readContract,
+  writeContract,
+  waitForTransactionReceipt,
+} from "wagmi/actions";
+import { maxUint256, type Address } from "viem";
 
-import { erc20Abi } from 'viem';
-import type { KnownErc20Token } from '@/config/tokens';
-import { Config } from 'wagmi';
+import { erc20Abi } from "viem";
+import type { KnownErc20Token } from "@/config/tokens";
+import { Config } from "wagmi";
 
 export type CardholderBody = {
   user: { name: string; address: string; provider: string };
@@ -21,7 +25,7 @@ export type CardholderBody = {
         city: string;
         state: string;
         postal_code: string;
-        country: 'GB';
+        country: "GB";
       };
     };
     email?: string;
@@ -61,7 +65,7 @@ export function buildCardholderBody(args: {
     user: {
       name: `${firstName} ${lastName}`,
       address: address as Address,
-      provider: 'wallet',
+      provider: "wallet",
     },
     cardholder: {
       name: name.trim(),
@@ -77,11 +81,11 @@ export function buildCardholderBody(args: {
           city: billing.city.trim(),
           state: billing.state.trim(),
           postal_code: billing.postal_code.trim(),
-          country: 'GB',
+          country: "GB",
         },
       },
-      email: (email ?? '').trim() || undefined,
-      phone_number: (phone ?? '').trim() || undefined,
+      email: (email ?? "").trim() || undefined,
+      phone_number: (phone ?? "").trim() || undefined,
       metadata: undefined,
     },
   };
@@ -99,36 +103,39 @@ export async function ensureTokenApprovals(args: {
     const allowance = (await readContract(config, {
       address: token.address as Address,
       abi: erc20Abi,
-      functionName: 'allowance',
+      functionName: "allowance",
       args: [owner, spender],
     })) as bigint;
     if (allowance >= maxUint256 / BigInt(2)) continue;
 
-    await writeContract(config, {
+    const txHash = await writeContract(config, {
       account: owner,
       address: token.address as Address,
       abi: erc20Abi,
-      functionName: 'approve',
+      functionName: "approve",
       args: [spender, maxUint256],
     });
+
+    // Ensure the approval is mined before continuing so downstream checks/readContract see the updated allowance
+    await waitForTransactionReceipt(config, { hash: txHash });
   }
 }
 
 export async function createUser(body: CardholderBody): Promise<void> {
-  const res = await fetch('/api/create-user', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    cache: 'no-store',
+  const res = await fetch("/api/create-user", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    cache: "no-store",
     body: JSON.stringify(body),
   });
 
   if (!res.ok) {
-    let message = 'Failed to create user';
+    let message = "Failed to create user";
     try {
       const data = await res.json();
-      if (typeof data?.error === 'string') {
+      if (typeof data?.error === "string") {
         message = data.error;
-      } else if (typeof data?.message === 'string') {
+      } else if (typeof data?.message === "string") {
         message = data.message;
       } else if (data) {
         message = JSON.stringify(data);
