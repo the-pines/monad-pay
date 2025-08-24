@@ -40,6 +40,6 @@ export async function GET(req: NextRequest) {
     const body = await res.json();
     return NextResponse.json(body, { status: res.status });
   } catch (err) {
-    return NextResponse.json({ error: "Quote failed" }, { status: 500 });
+    return NextResponse.json({ error: "Quote failed", err }, { status: 500 });
   }
 }
