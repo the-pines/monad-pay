@@ -101,22 +101,22 @@ export default function PointsPage() {
   const [tasks, setTasks] = useState<LocalTask[]>([
     {
       id: "demo-1",
-      label: "Create a vault",
+      label: "Create a vault and show us",
       checked: false,
     },
     {
       id: "demo-2",
-      label: "Contribute to a vault",
+      label: "Contribute to your vault",
       checked: false,
     },
     {
       id: "demo-3",
-      label: "Share Monad Pay at the venue",
+      label: "Bring a friend to us",
       checked: false,
     },
     {
       id: "demo-4",
-      label: "Onboard a teammate to try it",
+      label: "Post on X about Monad Pay",
       checked: false,
     },
     {
@@ -241,7 +241,7 @@ export default function PointsPage() {
           <div className='space-y-1'>
             <h2 className='text-lg font-semibold'>Make more points</h2>
             <p className='text-sm text-white/70'>
-              Do these, then find Cat & Nacho at the venue and show them proof.
+              Do these, then find Nacho & Cat at the venue and show them proof.
               They’ll reward you your points.
             </p>
           </div>
