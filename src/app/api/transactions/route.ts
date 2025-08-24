@@ -54,8 +54,8 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const address = url.searchParams.get("address") || "";
-    const limit = Number(url.searchParams.get("limit") || "200");
-    const fromBlock = Number(url.searchParams.get("fromBlock") || "15362000");
+    const limit = Number(url.searchParams.get("limit") || "75");
+    const fromBlock = Number(url.searchParams.get("fromBlock") || "3069120");
     const fresh = url.searchParams.get("fresh") === "1";
     if (!address) return NextResponse.json([], { status: 200 });
 

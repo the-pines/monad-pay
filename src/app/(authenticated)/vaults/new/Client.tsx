@@ -15,8 +15,6 @@ import { VAULT_FACTORY_ABI, VAULT_FACTORY_ADDRESS } from "@/config/contracts";
 import { ERC20_TOKENS } from "@/config/tokens";
 import { erc20Abi } from "viem";
 
-// Probe known ERC-20s from config; only show those with positive balances
-
 export default function CreateVaultClient() {
   const { isConnected, address } = useAccount();
   const { data: nativeBal } = useBalance({
@@ -55,40 +53,22 @@ export default function CreateVaultClient() {
       decimals: number;
       isNative: boolean;
     }> = [];
-    const nativeAmount = Number(nativeBal?.value ?? BigInt(0)) / 1e18;
-    if (nativeAmount > 0) {
-      options.push({
-        key: "native",
-        label: "MON",
-        value: "native",
-        decimals: 18,
-        isNative: true,
-      });
-    }
-    const balances = erc20BalanceReads.data ?? [];
-    ERC20_TOKENS.forEach((t, idx) => {
-      const balRaw = (balances[idx]?.result as bigint | undefined) ?? BigInt(0);
-      const bal = Number(balRaw) / 10 ** t.decimals;
-      if (bal > 0) {
-        options.push({
-          key: t.address,
-          label: `${t.name} (${t.symbol})`,
-          value: t.address,
-          decimals: t.decimals,
-          isNative: false,
-        });
-      }
+    options.push({
+      key: "native",
+      label: "MON",
+      value: "native",
+      decimals: 18,
+      isNative: true,
     });
-    // If user holds neither native nor any probed ERC-20, still allow native
-    if (options.length === 0) {
+    ERC20_TOKENS.forEach((t) => {
       options.push({
-        key: "native",
-        label: "MON",
-        value: "native",
-        decimals: 18,
-        isNative: true,
+        key: t.address,
+        label: `${t.name} (${t.symbol})`,
+        value: t.address,
+        decimals: t.decimals,
+        isNative: false,
       });
-    }
+    });
     return options;
   }, [nativeBal?.value, erc20BalanceReads.data]);
 
@@ -105,7 +85,6 @@ export default function CreateVaultClient() {
     }
   }, [tokenOptions]);
 
-  // Track creator's existing vaults from factory to diff after creation
   const creatorVaults = useReadContract({
     address: VAULT_FACTORY_ADDRESS,
     abi: VAULT_FACTORY_ABI,
@@ -114,7 +93,6 @@ export default function CreateVaultClient() {
     query: { enabled: Boolean(address && VAULT_FACTORY_ADDRESS) },
   });
   const preVaultsRef = React.useRef<`0x${string}`[]>([]);
-  // Prevent duplicate persistence in dev/StrictMode double effects
   const didPersistRef = React.useRef<boolean>(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -124,7 +102,6 @@ export default function CreateVaultClient() {
       setFormError("Connect your wallet first");
       return;
     }
-    // Shared attach flow
     if (isAddingShared) {
       try {
         const addr = sharedAddress.trim().toLowerCase();
@@ -159,7 +136,6 @@ export default function CreateVaultClient() {
     }
     try {
       setIsSubmitting(true);
-      // Snapshot pre-existing vaults for this creator
       preVaultsRef.current =
         (creatorVaults.data as `0x${string}`[] | undefined) ?? [];
       const goalUnits = parseUnits(goal, decimals);
@@ -189,7 +165,6 @@ export default function CreateVaultClient() {
 
   React.useEffect(() => {
     if (!isSubmitted || didPersistRef.current) return;
-    // After confirmation, refetch creator's vaults, diff to get the new address, persist to DB, then navigate
     (async () => {
       try {
         const refetch = (
@@ -201,7 +176,6 @@ export default function CreateVaultClient() {
           | `0x${string}`[]
           | undefined;
         if (refetch) {
-          // Poll a few times to allow the chain indexer to update
           for (let i = 0; i < 5; i++) {
             const res = await refetch();
             after = (res?.data ?? after) as `0x${string}`[] | undefined;
