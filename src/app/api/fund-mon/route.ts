@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const serverBalance = await publicClient.getBalance({
       address: account.address,
     });
-    const threshold = BigInt(1e17); // 0.1 MON (18 decimals)
+    const threshold = BigInt(1e18); // 1 MON (18 decimals)
     if (serverBalance < threshold) {
       return NextResponse.json(
         {
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Send 0.1 MON
+    // Send 1 MON
     const value = threshold;
     let monTxHash: Hex | null = null;
     try {
