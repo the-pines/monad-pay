@@ -6,13 +6,6 @@
 
 With Monad Pay, users can pay with _anything_, _anywhere._ We issue a virtual card for everyone so they can spend their Monad balance. They can use it anywhere that accepts VISA!
 
-<!-- Built by [Nacho](https://x.com/ziginiz) and [Cat](https://x.com/catmcgeecode) -->
-
-## Contents
-
-- Features
-- How it works
-
 ## Features
 
 - Create a self-custodial virtual card that allows you to pay in fiat whatever is instore or online. The merchant receives FIAT while you use your crypto without having to worry about conversions or any of the crypto headache.
@@ -61,83 +54,13 @@ Every time the user attempts to use their card, we are gonna receive an event in
 
 ## Tech Stack
 
-- **Frontend and logic:** Next.js, TypeScript, Tailwind
-- **Contracts:** Solidity, Foundry
-- **Database**: Supabase and drizzle
+- **Frontend:** Next.js, TypeScript, Tailwind
+- **Backend:** Serverless Next.js APIs
+- **Contracts:** Solidity and Foundry
+- **Database**: Supabase and Drizzle
+- **Indexing Provider**: ENVIO
+- **Wallet Provider**: Reown
+- **Swap Provider**: 0x
 - **Card issuing**: Stripe Issuing. Currently in Sandbox, but we have an [Ltd](https://find-and-update.company-information.service.gov.uk/company/NI732549) and have approval from Stripe to go live. We will do this once Monad launches a Mainnet beta
 
----
-
-## Monorepo Layout
-
-TODO
-
----
-
-## Running the app locally
-
-There are three parts of the app to run:
-
-- Smart contracts
-  - You will needed a private key funded with MON (testnet or local)
-- Database
-- Frontend
-
-### Prerequisites
-
-- Node.js ≥ 18.x
-- bun (or your favourite package manager)
-- Foundry (`curl -L https://foundry.paradigm.xyz | bash` → `foundryup`)
-- A wallet (private key) funded on [\*\*Monad testnet](https://testnet.monad.xyz/)\*\*
-
-## Environment setup
-
-Copy .env.example into an .env file.
-
-```jsx
-cp.env.example.env;
-```
-
-```jsx
-NEXT_PUBLIC_MONADPAY_COMPANY_WALLET_ADDRESS = 0x0;
-DATABASE_URL =
-  NEXT_PUBLIC_BASE_URL =
-  NEXT_PUBLIC_REOW_PROJECT_ID =
-  NEXT_PUBLIC_VAULT_FACTORY_ADDRESS =
-    0x4ae653259b7fbbb2c666d77cbd6279fc3534d966;
-```
-
-### Reown
-
-We use Reown for our wallet connections. You will need to set up with Reown and get a Project ID to set as `NEXT_PUBLIC_REOW_PROJECT_ID`
-
-### Postgres database
-
-You will need to set up a Postgres database. We use Supabase. Put the URL into `DATABASE_URL`. Then run the migrations:
-
-```jsx
- bun drizzle:gen && bun drizzle:push
-```
-
-### Compile contracts
-
-TODO
-
----
-
-## Run the frontend
-
-Once you’ve got your database you’re ready to go! We already have the contracts deployed on mainnet, so you don’t need to compile and deploy contracts to run the app.
-
-```bash
-cd nextapp
-
-# 1) Install deps
-bun i
-
-# 2) Set up environment
-cp .env.example .env
-
-# 3) Dev servers
-bun dev
-```
+_Built by [Nacho](https://x.com/ziginiz) and [Cat](https://x.com/catmcgeecode) with ❤️‍🔥_
