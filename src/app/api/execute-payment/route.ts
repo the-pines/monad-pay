@@ -3,3 +3,8 @@
 // get the merchant amount and parse it (we are storing raw stripe values)
 // get the price of the amount (in gbp) to usd
 // use the executor private key to create a transaction from the user address to ours for the same amount of usdc (we have permit of the usdc)
+import { NextResponse } from "next/server";
+
+export async function POST() {
+  return NextResponse.json({ ok: true });
+}
