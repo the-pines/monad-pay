@@ -55,6 +55,7 @@ const initialValue = {
   portfolio: [],
   isFetchingUser: false,
   isFetchingPortfolio: false,
+  refreshPortfolio: async () => {},
 };
 
 const UserContext = createContext<UserContext>(initialValue);
