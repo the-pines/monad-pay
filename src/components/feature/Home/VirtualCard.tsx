@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import Image from "next/image";
 import { RiVisaLine } from "react-icons/ri";
+import { FiCopy, FiCheck } from "react-icons/fi";
 import { useMemo, useState, useCallback, useEffect } from "react";
 
 type VirtualCardProps = {
@@ -24,6 +25,7 @@ export default function VirtualCard({
 }: VirtualCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [shimmerActive, setShimmerActive] = useState(false);
+  const [copied, setCopied] = useState(false);
   const maskedNumber = useMemo(() => maskCardNumber(cardNumber), [cardNumber]);
   const groupedNumber = useMemo(
     () => groupCardNumber(cardNumber),
@@ -55,52 +57,73 @@ export default function VirtualCard({
     [toggle]
   );
 
-  return (
-    <div
-      className={clsx(
-        "group relative w-[335px] sm:w-[360px] md:w-[380px] aspect-[1.68/1] cursor-pointer",
-        className
-      )}
-      role='button'
-      tabIndex={0}
-      aria-pressed={isFlipped}
-      aria-label={isFlipped ? "Show front of card" : "Show back of card"}
-      title='Tap or press Enter to flip'
-      onClick={toggle}
-      onKeyDown={onKeyDown}
-      style={{ perspective: 1000 }}
-    >
-      <div
-        className='relative size-full transition-transform duration-500 ease-out'
-        style={{
-          transformStyle: "preserve-3d",
-          transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
-        }}
-      >
-        {/* FRONT */}
-        <CardFace shimmerActive={shimmerActive}>
-          <CardChrome />
-          <CardContent
-            cardholderName={cardholderName}
-            number={masked ? maskedNumber : groupedNumber}
-            expiry={expiry}
-            cvc='***'
-            rightBrand
-          />
-        </CardFace>
+  const handleCopy = useCallback(async () => {
+    try {
+      const digitsOnly = cardNumber.replace(/\D/g, "");
+      await navigator.clipboard.writeText(digitsOnly);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // noop
+    }
+  }, [cardNumber]);
 
-        {/* BACK */}
-        <CardFace back shimmerActive={shimmerActive}>
-          <CardChrome />
-          <CardContent
-            cardholderName={cardholderName}
-            number={groupedNumber}
-            expiry={expiry}
-            cvc={cvc}
-            rightBrand
-          />
-        </CardFace>
+  return (
+    <div className={clsx("inline-flex flex-col items-center", className)}>
+      <div
+        className={clsx(
+          "group relative w-[335px] sm:w-[360px] md:w-[380px] aspect-[1.68/1] cursor-pointer"
+        )}
+        role='button'
+        tabIndex={0}
+        aria-pressed={isFlipped}
+        aria-label={isFlipped ? "Show front of card" : "Show back of card"}
+        title='Tap or press Enter to flip'
+        onClick={toggle}
+        onKeyDown={onKeyDown}
+        style={{ perspective: 1000 }}
+      >
+        <div
+          className='relative size-full transition-transform duration-500 ease-out'
+          style={{
+            transformStyle: "preserve-3d",
+            transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+          }}
+        >
+          {/* FRONT */}
+          <CardFace shimmerActive={shimmerActive}>
+            <CardChrome />
+            <CardContent
+              cardholderName={cardholderName}
+              number={masked ? maskedNumber : groupedNumber}
+              expiry={expiry}
+              cvc='***'
+              rightBrand
+            />
+          </CardFace>
+
+          {/* BACK */}
+          <CardFace back shimmerActive={shimmerActive}>
+            <CardChrome />
+            <CardContent
+              cardholderName={cardholderName}
+              number={groupedNumber}
+              expiry={expiry}
+              cvc={cvc}
+              rightBrand
+            />
+          </CardFace>
+        </div>
       </div>
+      <button
+        type='button'
+        onClick={handleCopy}
+        className='mt-2 text-white/70 hover:text-white focus:outline-none'
+        title='Copy card number'
+        aria-label='Copy card number'
+      >
+        {copied ? <FiCheck size={14} /> : <FiCopy size={14} />}
+      </button>
     </div>
   );
 }
