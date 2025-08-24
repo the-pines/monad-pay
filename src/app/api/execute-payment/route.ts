@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
       txHash,
     });
 
-    const pointsAmount = usdcMinor / BigInt(100);
+    const pointsAmount = usdcMinor / BigInt(1_000);
     if (pointsAmount > BigInt(0)) {
       try {
         const res = await broadcastAwardPoints({
