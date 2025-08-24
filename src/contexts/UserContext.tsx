@@ -1,6 +1,6 @@
-import { ERC20_TOKENS } from '@/config/tokens';
-import { getUsdPricesForSymbols } from '@/lib/prices';
-import { useAppKitAccount } from '@reown/appkit/react';
+import { ERC20_TOKENS } from "@/config/tokens";
+import { getUsdPricesForSymbols } from "@/lib/prices";
+import { useAppKitAccount } from "@reown/appkit/react";
 import {
   createContext,
   ReactNode,
@@ -8,9 +8,9 @@ import {
   useContext,
   useEffect,
   useState,
-} from 'react';
-import { erc20Abi, formatUnits } from 'viem';
-import { usePublicClient } from 'wagmi';
+} from "react";
+import { erc20Abi, formatUnits } from "viem";
+import { usePublicClient } from "wagmi";
 
 type User = {
   name: string;
@@ -38,19 +38,20 @@ interface UserContext {
   balance: string;
   isFetchingUser: boolean;
   isFetchingPortfolio: boolean;
+  refreshPortfolio: () => Promise<void>;
 }
 
 const initialValue = {
   user: {
-    name: '',
+    name: "",
     card: {
-      displayName: '',
-      expiry: '',
-      number: '',
-      cvc: '',
+      displayName: "",
+      expiry: "",
+      number: "",
+      cvc: "",
     },
   },
-  balance: '',
+  balance: "",
   portfolio: [],
   isFetchingUser: false,
   isFetchingPortfolio: false,
@@ -59,7 +60,7 @@ const initialValue = {
 const UserContext = createContext<UserContext>(initialValue);
 
 const USER_CACHE: Record<string, User> = {};
-let BALANCE_CACHE: string = '0';
+let BALANCE_CACHE: string = "0";
 
 const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User>(initialValue.user);
@@ -83,14 +84,14 @@ const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     try {
       setIsFetchingUser(true);
 
-      const res = await fetch('/api/get-user-card', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+      const res = await fetch("/api/get-user-card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ address }),
       });
       if (!res.ok) {
-        throw new Error('Fetch user failed :/');
+        throw new Error("Fetch user failed :/");
       }
 
       const data = await res.json();
@@ -118,8 +119,8 @@ const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       const items: Portfolio = [];
       if (nativeAmount > 0) {
         items.push({
-          symbol: 'MON',
-          name: 'Monad',
+          symbol: "MON",
+          name: "Monad",
           decimals: 18,
           amount: nativeAmount,
           amountUsd: 0,
@@ -131,7 +132,7 @@ const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         contracts: ERC20_TOKENS.map((t) => ({
           address: t.address as `0x${string}`,
           abi: erc20Abi,
-          functionName: 'balanceOf' as const,
+          functionName: "balanceOf" as const,
           args: [address as `0x${string}`],
         })),
       });
@@ -139,7 +140,7 @@ const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       ERC20_TOKENS.forEach((t, i) => {
         const r = erc20Results[i];
 
-        const bal = r.status === 'success' ? (r.result as bigint) : BigInt(0);
+        const bal = r.status === "success" ? (r.result as bigint) : BigInt(0);
         if (bal === BigInt(0)) return;
 
         const amount = parseFloat(formatUnits(bal, t.decimals));
@@ -201,7 +202,15 @@ const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   return (
     <UserContext.Provider
-      value={{ user, balance, portfolio, isFetchingUser, isFetchingPortfolio }}>
+      value={{
+        user,
+        balance,
+        portfolio,
+        isFetchingUser,
+        isFetchingPortfolio,
+        refreshPortfolio: fetchPortfolio,
+      }}
+    >
       {children}
     </UserContext.Provider>
   );

@@ -8,7 +8,7 @@ import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { parseUnits } from "viem";
 
 export default function Portfolio() {
-  const { portfolio, isFetchingPortfolio } = useUser();
+  const { portfolio, isFetchingPortfolio, refreshPortfolio } = useUser();
   const { address, chain } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -65,6 +65,8 @@ export default function Portfolio() {
       });
 
       setShowSwap(false);
+      // Recompute portfolio and overall balance immediately after swap
+      await refreshPortfolio();
     } catch (err) {
       console.error(err);
     }

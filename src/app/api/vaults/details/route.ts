@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Chain, createPublicClient, http } from "viem";
 import type { Abi } from "viem";
 import { db } from "@/db";
@@ -96,6 +96,13 @@ export async function GET(req: NextRequest) {
         functionName: "creator",
       });
     }
+    for (const va of vaultAddresses) {
+      contracts.push({
+        address: va,
+        abi: VAULT_ABI_TYPED,
+        functionName: "isWithdrawn",
+      });
+    }
 
     const result = await publicClient.multicall({
       contracts,
@@ -107,6 +114,7 @@ export async function GET(req: NextRequest) {
     const assetsStart = isNativeStart + vaultAddresses.length;
     const balancesStart = assetsStart + vaultAddresses.length;
     const creatorsStart = balancesStart + vaultAddresses.length;
+    const withdrawnStart = creatorsStart + vaultAddresses.length;
 
     // Derive asset addresses
     const assetAddresses: (`0x${string}` | undefined)[] = vaultAddresses.map(
@@ -163,71 +171,103 @@ export async function GET(req: NextRequest) {
     const nowIso = now.toISOString();
     const prevIso = prev.toISOString();
 
-    // Map results back to UiVault[]
-    const uiVaults: UiVault[] = vaultAddresses.map((va, i) => {
-      const goalRaw =
-        (result[goalsStart + i]?.result as bigint | undefined) ?? BigInt(0);
-      const name =
-        (result[namesStart + i]?.result as string | undefined) ||
-        `Vault ${va.slice(0, 6)}…${va.slice(-4)}`;
-      const isNative = Boolean(
-        (result[isNativeStart + i]?.result as boolean | undefined) ?? false
-      );
-      const asset = ((result[assetsStart + i]?.result as
-        | `0x${string}`
-        | undefined) ??
-        ("0x0000000000000000000000000000000000000000" as `0x${string}`)) as `0x${string}`;
-      const balRaw =
-        (result[balancesStart + i]?.result as bigint | undefined) ?? BigInt(0);
-      const creator =
-        (result[creatorsStart + i]?.result as `0x${string}` | undefined) ??
-        undefined;
-
-      let decimals = 18;
-      let symbol = "";
-      if (isNative) {
-        decimals = 18;
-        symbol = "MON";
-      } else {
-        const nnPos = indexToNonNativePosition[i];
-        if (nnPos === undefined) {
-          decimals = 18;
-          symbol = "";
-        } else {
-          const nonNativeCount = nonNativeIndices.length;
-          const dRes = erc20Results[nnPos]?.result as number | undefined;
-          const sRes = erc20Results[nonNativeCount + nnPos]?.result as
-            | string
-            | undefined;
-          decimals = Number(dRes ?? 18);
-          symbol = String(sRes ?? "");
-        }
-      }
-
-      const toUnits = (x: bigint, d: number) => Number(x) / 10 ** d;
-      const balance = toUnits(balRaw, decimals);
-      const goal = toUnits(goalRaw, decimals);
-
-      return {
-        id: va,
-        name,
-        symbol,
-        assetAddress: asset,
-        isNative,
-        decimals,
-        creator,
-        isShared:
-          Boolean(address) &&
-          Boolean(creator) &&
-          String(creator).toLowerCase() !== String(address).toLowerCase(),
-        balanceUsd: balance,
-        goalUsd: goal,
-        history: [
-          { timestamp: prevIso, valueUsd: Math.max(0, balance - 0.01) },
-          { timestamp: nowIso, valueUsd: balance },
-        ],
-      } satisfies UiVault;
+    // Determine withdrawn vaults and proactively remove user mapping
+    const withdrawnFlags: boolean[] = vaultAddresses.map((_, i) => {
+      const r = result[withdrawnStart + i];
+      return Boolean((r?.result as boolean | undefined) ?? false);
     });
+
+    const withdrawnAddresses: string[] = [];
+    withdrawnFlags.forEach((w, i) => {
+      if (w) withdrawnAddresses.push(vaultAddresses[i]);
+    });
+
+    // Best-effort cleanup for withdrawn vaults
+    if (withdrawnAddresses.length > 0) {
+      try {
+        for (const addr of withdrawnAddresses) {
+          await db
+            .delete(vaults)
+            .where(and(eq(vaults.userId, user.id), eq(vaults.address, addr)));
+        }
+      } catch {
+        // ignore cleanup errors
+      }
+    }
+
+    // Map results back to UiVault[] (skip withdrawn ones)
+    const uiVaults: UiVault[] = vaultAddresses
+      .map((va, i) => {
+        const goalRaw =
+          (result[goalsStart + i]?.result as bigint | undefined) ?? BigInt(0);
+        const name =
+          (result[namesStart + i]?.result as string | undefined) ||
+          `Vault ${va.slice(0, 6)}…${va.slice(-4)}`;
+        const isNative = Boolean(
+          (result[isNativeStart + i]?.result as boolean | undefined) ?? false
+        );
+        const asset = ((result[assetsStart + i]?.result as
+          | `0x${string}`
+          | undefined) ??
+          ("0x0000000000000000000000000000000000000000" as `0x${string}`)) as `0x${string}`;
+        const balRaw =
+          (result[balancesStart + i]?.result as bigint | undefined) ??
+          BigInt(0);
+        const creator =
+          (result[creatorsStart + i]?.result as `0x${string}` | undefined) ??
+          undefined;
+
+        let decimals = 18;
+        let symbol = "";
+        if (isNative) {
+          decimals = 18;
+          symbol = "MON";
+        } else {
+          const nnPos = indexToNonNativePosition[i];
+          if (nnPos === undefined) {
+            decimals = 18;
+            symbol = "";
+          } else {
+            const nonNativeCount = nonNativeIndices.length;
+            const dRes = erc20Results[nnPos]?.result as number | undefined;
+            const sRes = erc20Results[nonNativeCount + nnPos]?.result as
+              | string
+              | undefined;
+            decimals = Number(dRes ?? 18);
+            symbol = String(sRes ?? "");
+          }
+        }
+
+        const toUnits = (x: bigint, d: number) => Number(x) / 10 ** d;
+        const balance = toUnits(balRaw, decimals);
+        const goal = toUnits(goalRaw, decimals);
+
+        // Skip withdrawn vaults from response
+        if (withdrawnFlags[i]) {
+          return null as unknown as UiVault;
+        }
+
+        return {
+          id: va,
+          name,
+          symbol,
+          assetAddress: asset,
+          isNative,
+          decimals,
+          creator,
+          isShared:
+            Boolean(address) &&
+            Boolean(creator) &&
+            String(creator).toLowerCase() !== String(address).toLowerCase(),
+          balanceUsd: balance,
+          goalUsd: goal,
+          history: [
+            { timestamp: prevIso, valueUsd: Math.max(0, balance - 0.01) },
+            { timestamp: nowIso, valueUsd: balance },
+          ],
+        } satisfies UiVault;
+      })
+      .filter((v) => v !== null);
 
     return NextResponse.json(uiVaults);
   } catch (err) {

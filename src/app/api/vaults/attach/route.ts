@@ -58,12 +58,6 @@ export async function POST(req: NextRequest) {
     const existingForAddress = await db.query.vaults.findMany({
       where: eq(vaults.address, vaultAddress),
     });
-    if (existingForAddress.length === 0) {
-      return NextResponse.json(
-        { error: "Vault not found in database" },
-        { status: 404 }
-      );
-    }
 
     const existingContributorMap = await db.query.vaults.findFirst({
       where: and(
@@ -92,6 +86,14 @@ export async function POST(req: NextRequest) {
         .where(
           and(eq(vaults.userId, row.userId), eq(vaults.address, vaultAddress))
         );
+    }
+
+    // Ensure contributor also has a mapping so they can see the shared vault
+    if (!contributorMap) {
+      await db
+        .insert(vaults)
+        .values({ userId: contributor.id, address: vaultAddress })
+        .onConflictDoNothing();
     }
 
     return NextResponse.json({ attached: true }, { status: 200 });

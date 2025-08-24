@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { sql } from "drizzle-orm";
 import {
   text,
   uuid,
@@ -10,7 +10,7 @@ import {
   numeric,
   index,
   char,
-} from 'drizzle-orm/pg-core';
+} from "drizzle-orm/pg-core";
 
 export const providerE         = pgEnum('provider_e', ['gmail', 'apple', 'wallet']); // prettier-ignore
 export const cardStatusE       = pgEnum('card_status_e', ['active', 'inactive', 'deleted']); // prettier-ignore
