@@ -8,20 +8,18 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /**
  * @title Vault
  * @notice Vault holds either ONE ERC20 or native MON, chosen at deploy.
- *         Anyone can contribute the chosen asset. Only creator can withdraw,
- *         and only after balance >= goal. One-shot withdraw closes the vault.
+ *         Anyone can contribute the chosen asset. Only creator can withdraw
  */
 contract Vault is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // Immutable config
     address public immutable creator;
-    IERC20  public immutable asset;      // zero when isNative == true
-    bool    public immutable isNative;   // true => native MON vault
-    uint256 public immutable goal;       // token units or wei (if native)
+    IERC20  public immutable asset;      
+    bool    public immutable isNative;   
+    uint256 public immutable goal;       
     string  public name;
 
-    // State
     bool public isWithdrawn;
 
     // Events
@@ -39,12 +37,14 @@ contract Vault is ReentrancyGuard {
 
     constructor(
         address _creator,
-        IERC20 _asset,           
+        IERC20 _asset,           // set to IERC20(address(0)) if native
         bool _isNative,
         uint256 _goal,
         string memory _name
     ) payable {
-      
+        // Invariants:
+        // - if native: asset must be zero
+        // - if ERC20 : asset must be non-zero
         if (_creator == address(0) || _goal == 0) revert InvalidParam();
         if (_isNative) {
             if (address(_asset) != address(0)) revert InvalidParam();

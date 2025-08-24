@@ -10,12 +10,10 @@ contract DeployPointsAndAdminScript is Script {
         external
         returns (PointsToken token, AdminMinterLeaderboard aml)
     {
-        vm.startBroadcast(); // or vm.startBroadcast(PRIVATE_KEY) overload
+        vm.startBroadcast(); 
 
-        // Make the *broadcasting EOA* (tx.origin) the temporary minter
         token = new PointsToken(tx.origin);
 
-        // Deploy AML wired to token
         aml = new AdminMinterLeaderboard(address(token));
 
         vm.stopBroadcast();

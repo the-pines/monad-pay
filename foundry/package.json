@@ -16,8 +16,9 @@
     "fmt": "forge fmt",
     "anvil": "anvil",
     "deploy:factory": "forge script scripts/DeployFactory.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast",
+    "deploy:points": "forge script scripts/DeployPointsAndAdmin.s.sol:DeployPointsAndAdminScript --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast",
     "deploy:vault": "forge script scripts/CreateVault.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast --sig 'run(address,address,uint256)' $FACTORY $ASSET $GOAL",
-    "deploy:points": "forge script scripts/DeployPointsAndAdmin.s.sol:DeployPointsAndAdminScript --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast"
+    "deploy:forwarder": "forge script scripts/DeployForwarder.s.sol --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.4.0"

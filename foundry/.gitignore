@@ -2,9 +2,12 @@
 /node_modules
 
 # Compilation output
-/dist
+/broadcast
+/cache
+.env
 
 # pnpm deploy output
 /bundle
 # Typechain output
 /types
+/out

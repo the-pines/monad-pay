@@ -5,7 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Vault} from "./Vault.sol";
 
 /**
- * @notice Deploys vaults that hold either ERC20 OR native MON (chosen at creation).
+ * @notice Deploys vaults that hold either ERC20 OR native MON 
  *        
  */
 contract VaultFactory {
@@ -23,8 +23,8 @@ contract VaultFactory {
     );
 
     // Indexes
-    mapping(address => address[]) private _ownerVaults;    // owner => vaults
-    mapping(address => address[]) private _deployerVaults; // deployer => vaults
+    mapping(address => address[]) private _ownerVaults;    
+    mapping(address => address[]) private _deployerVaults; 
     address[] private _allVaults;
 
 
