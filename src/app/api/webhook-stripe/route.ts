@@ -1,12 +1,12 @@
-import Stripe from 'stripe';
-import { eq, or } from 'drizzle-orm';
-import { NextRequest } from 'next/server';
-import { monadTestnet } from 'viem/chains';
-import { createPublicClient, erc20Abi, http } from 'viem';
+import Stripe from "stripe";
+import { eq } from "drizzle-orm";
+import { NextRequest } from "next/server";
+import { monadTestnet } from "viem/chains";
+import { createPublicClient, erc20Abi, http } from "viem";
 
-import { db } from '@/db';
-import { cards, payments, users } from '@/db/schema';
-import { privateKeyToAccount } from 'viem/accounts';
+import { db } from "@/db";
+import { cards, payments, users } from "@/db/schema";
+import { privateKeyToAccount } from "viem/accounts";
 
 const RPC_URL = process.env.MONAD_RPC_URL!;
 const EXECUTOR_PK = process.env.EXECUTOR_PRIVATE_KEY! as `0x${string}`;
@@ -16,10 +16,10 @@ const account = privateKeyToAccount(EXECUTOR_PK);
 const transport = http(RPC_URL);
 const publicClient = createPublicClient({ chain: monadTestnet, transport });
 
-const STRIPE_API_VERSION = '2025-07-30.basil';
+const STRIPE_API_VERSION = "2025-07-30.basil";
 const HEADERS = {
-  'Stripe-Version': STRIPE_API_VERSION,
-  'Content-Type': 'application/json',
+  "Stripe-Version": STRIPE_API_VERSION,
+  "Content-Type": "application/json",
 };
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: STRIPE_API_VERSION,
@@ -38,8 +38,8 @@ function gbpMinorToUsdcMinorToday(gbpMinor: string | bigint) {
     return {
       asOf,
       gbpUsd: rate,
-      gbpMinor: '0',
-      usdcMinor: '0',
+      gbpMinor: "0",
+      usdcMinor: "0",
     };
   }
 
@@ -62,9 +62,9 @@ function gbpMinorToUsdcMinorToday(gbpMinor: string | bigint) {
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
-  const sig = req.headers.get('stripe-signature');
+  const sig = req.headers.get("stripe-signature");
   if (!sig) {
-    return new Response('Missing stripe-signature', {
+    return new Response("Missing stripe-signature", {
       status: 400,
       headers: HEADERS,
     });
@@ -78,11 +78,11 @@ export async function POST(req: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET_KEY!
     );
   } catch (err) {
-    console.error('[POST /api/webhook-stripe] error:', err);
-    return new Response('Invalid signature', { status: 400, headers: HEADERS });
+    console.error("[POST /api/webhook-stripe] error:", err);
+    return new Response("Invalid signature", { status: 400, headers: HEADERS });
   }
 
-  if (event.type === 'issuing_authorization.request') {
+  if (event.type === "issuing_authorization.request") {
     const auth = event.data.object;
     const stripeCardId = auth.card.id;
 
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       return new Response(
         JSON.stringify({
           approved: false,
-          metadata: { reason: 'card_not_found' },
+          metadata: { reason: "card_not_found" },
         }),
         {
           status: 200,
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
       return new Response(
         JSON.stringify({
           approved: false,
-          metadata: { reason: 'user_not_found' },
+          metadata: { reason: "user_not_found" },
         }),
         {
           status: 200,
@@ -137,10 +137,10 @@ export async function POST(req: NextRequest) {
         paymentId: auth.id,
         amount: String(pr.amount),
         currency: pr.currency.toUpperCase(),
-        merchant_name: auth.merchant_data.name ?? 'no_name',
+        merchant_name: auth.merchant_data.name ?? "no_name",
         merchant_amount: String(pr.merchant_amount),
         merchant_currency: pr.merchant_currency.toUpperCase(),
-        status: 'started',
+        status: "started",
       })
       .onConflictDoNothing()
       .returning();
@@ -151,17 +151,20 @@ export async function POST(req: NextRequest) {
       }));
 
     const owner = user.address as `0x${string}`;
+
+    console.log("owner", owner);
+
     const [allowance, balance] = await Promise.all([
       publicClient.readContract({
         address: USDC_ADDRESS,
         abi: erc20Abi,
-        functionName: 'allowance',
+        functionName: "allowance",
         args: [owner, account.address],
       }) as Promise<bigint>,
       publicClient.readContract({
         address: USDC_ADDRESS,
         abi: erc20Abi,
-        functionName: 'balanceOf',
+        functionName: "balanceOf",
         args: [owner],
       }) as Promise<bigint>,
     ]);
@@ -169,12 +172,15 @@ export async function POST(req: NextRequest) {
     const gbpMinor = String(payment.amount);
     const fx = gbpMinorToUsdcMinorToday(gbpMinor);
     const usdcMinor = BigInt(fx.usdcMinor);
+    console.log("usdcMinor", usdcMinor);
+    console.log("allowance", allowance);
+    console.log("balance", balance);
 
     if (allowance < usdcMinor) {
       return new Response(
         JSON.stringify({
           approved: false,
-          metadata: { reason: 'insufficient_usdc_allowance' },
+          metadata: { reason: "insufficient_usdc_allowance" },
         }),
         {
           status: 200,
@@ -186,7 +192,7 @@ export async function POST(req: NextRequest) {
       return new Response(
         JSON.stringify({
           approved: false,
-          metadata: { reason: 'insufficient_usdc_balance' },
+          metadata: { reason: "insufficient_usdc_balance" },
         }),
         {
           status: 200,
@@ -201,7 +207,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  if (event.type === 'issuing_authorization.created') {
+  if (event.type === "issuing_authorization.created") {
     const auth = event.data.object as Stripe.Issuing.Authorization;
 
     const payment = await db.query.payments.findFirst({
@@ -209,7 +215,7 @@ export async function POST(req: NextRequest) {
     });
     if (!payment) {
       // i should create the payment object if this conditional happens
-      return new Response('ok', {
+      return new Response("ok", {
         status: 200,
         headers: HEADERS,
       });
@@ -218,7 +224,7 @@ export async function POST(req: NextRequest) {
     await db
       .update(payments)
       .set({
-        status: auth.approved ? 'completed' : 'cancelled',
+        status: auth.approved ? "completed" : "cancelled",
         amount: String(auth.amount),
         currency: auth.currency.toUpperCase(),
         merchant_amount: String(auth.merchant_amount),
@@ -231,28 +237,28 @@ export async function POST(req: NextRequest) {
       try {
         const base = `${process.env.NEXT_PUBLIC_BASE_URL}/api/execute-payment`;
         const execRes = await fetch(base, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ paymentId: payment.id }),
-          cache: 'no-store',
+          cache: "no-store",
         });
 
         if (!execRes.ok) {
-          const text = await execRes.text().catch(() => '');
-          console.error('[execute-payment] non-200', execRes.status, text);
+          const text = await execRes.text().catch(() => "");
+          console.error("[execute-payment] non-200", execRes.status, text);
         }
       } catch (e) {
-        console.error('[execute-payment] call failed', e);
+        console.error("[execute-payment] call failed", e);
       }
     }
 
-    return new Response('ok', {
+    return new Response("ok", {
       status: 200,
       headers: HEADERS,
     });
   }
 
-  return new Response('ignored', {
+  return new Response("ignored", {
     status: 200,
     headers: HEADERS,
   });
