@@ -47,8 +47,25 @@ export async function POST(req: NextRequest) {
       transport: http(MONAD_RPC_URL),
     });
 
-    const balance = await publicClient.getBalance({ address: addr as Address });
+    // Check server wallet balance first
+    const serverBalance = await publicClient.getBalance({
+      address: account.address,
+    });
     const threshold = BigInt(1e17); // 0.1 MON (18 decimals)
+    if (serverBalance < threshold) {
+      return NextResponse.json(
+        {
+          funded: false,
+          reason: "server_insufficient_balance",
+          serverAddress: account.address,
+          serverBalance: serverBalance.toString(),
+        },
+        { status: 200 }
+      );
+    }
+
+    // Check user balance
+    const balance = await publicClient.getBalance({ address: addr as Address });
     if (balance >= threshold) {
       return NextResponse.json(
         { funded: false, reason: "balance_sufficient" },
@@ -58,14 +75,25 @@ export async function POST(req: NextRequest) {
 
     // Send flat 0.1 MON
     const value = threshold;
-    const hash = await wallet.sendTransaction({
-      to: addr as Address,
-      value,
-      // Explicit chain field to satisfy types when client is created without a chain
-      chain: undefined,
-    });
-
-    return NextResponse.json({ funded: true, txHash: hash }, { status: 200 });
+    try {
+      const hash = await wallet.sendTransaction({
+        to: addr as Address,
+        value,
+        // Explicit chain field to satisfy types when client is created without a chain
+        chain: undefined,
+      });
+      return NextResponse.json({ funded: true, txHash: hash }, { status: 200 });
+    } catch (sendErr) {
+      console.error("[fund-mon] sendTransaction failed:", sendErr);
+      return NextResponse.json(
+        {
+          funded: false,
+          reason: "send_failed",
+          error: (sendErr as Error)?.message ?? String(sendErr),
+        },
+        { status: 200 }
+      );
+    }
   } catch (err) {
     console.error("[POST /api/fund-mon] error:", err);
     return NextResponse.json(
