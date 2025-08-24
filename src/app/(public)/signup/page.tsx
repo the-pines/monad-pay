@@ -34,12 +34,21 @@ export default function SignUpPage() {
   const maybeFundMon = useCallback(async () => {
     try {
       if (!address || !isAddress(address)) return;
-      await fetch("/api/fund-mon", {
+      const res = await fetch("/api/fund-mon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ address }),
       });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.funded === false) {
+        if (data.reason === "server_insufficient_balance") {
+          setError(
+            "Server wallet temporarily cannot fund gas. Please try again later."
+          );
+        }
+      }
     } catch {
       // non-blocking
     }
