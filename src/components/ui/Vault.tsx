@@ -18,47 +18,43 @@ const VaultCard: React.FC<VaultCardProps> = ({ vault, onSelect }) => {
 
   return (
     <button
-      type="button"
+      type='button'
       onClick={() => onSelect?.(vault)}
-      className="group h-[167px] rounded-3xl bg-[var(--card-surface)] border border-[var(--card-border)] interactive-gradient
+      className='group h-[167px] rounded-3xl bg-[var(--card-surface)] border border-[var(--card-border)] interactive-gradient
                  hover:bg-[var(--card-surface-hover)] transition-colors soft-shadow
                  focus:outline-none focus:ring-2 focus:ring-[#8A76F9]/60
-                 p-4 w-full text-left"
+                 p-4 w-full text-left'
     >
-      {/* top row: emoji + name + optional badge */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          {/* emoji only, no background */}
-          <span className="text-[18px]" aria-hidden>
+      <div className='flex items-center justify-between gap-2'>
+        <div className='flex items-center gap-2 min-w-0'>
+          <span className='text-[18px]' aria-hidden>
             {pickEmojiForVault(vault.name)}
           </span>
-          <span className="font-semibold text-[15px] text-foreground truncate">
+          <span className='font-semibold text-[15px] text-foreground truncate'>
             {vault.name}
           </span>
         </div>
 
         {vault.isShared ? (
-          <span className="ml-2 shrink-0 rounded-full bg-white/10 text-white/70 px-2 py-0.5 text-[10px] font-medium">
+          <span className='ml-2 shrink-0 rounded-full bg-white/10 text-white/70 px-2 py-0.5 text-[10px] font-medium'>
             SHARED
           </span>
         ) : null}
       </div>
 
-      {/* goal line */}
-      <div className="mt-1 text-[12.5px] text-white/65 truncate">
+      <div className='mt-1 text-[12.5px] text-white/65 truncate'>
         Goal: {formatToken(vault.goalUsd, vault.symbol)}
       </div>
 
-      {/* bottom row: amount + progress */}
-      <div className="mt-4 flex items-center justify-between">
-        <div className="display-text text-sm font-semibold bg-gradient-to-r from-[#8A76F9] to-[#b7a5ff] bg-clip-text text-transparent tabular-nums">
+      <div className='mt-4 flex items-center justify-between'>
+        <div className='display-text text-sm font-semibold bg-gradient-to-r from-[#8A76F9] to-[#b7a5ff] bg-clip-text text-transparent tabular-nums'>
           {formatToken(vault.balanceUsd, vault.symbol)}
         </div>
         <ProgressCircle
           value={progress}
           size={44}
           thickness={6}
-          className="[--pc-start:#8A76F9] [--pc-end:#B7A5FF]"
+          className='[--pc-start:#8A76F9] [--pc-end:#B7A5FF]'
           showPercent={false}
         />
       </div>

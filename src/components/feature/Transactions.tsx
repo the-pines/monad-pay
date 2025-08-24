@@ -133,7 +133,6 @@ export default function Transactions() {
     }
   }, [grouped, selectedMonthKey]);
 
-  // Ensure the horizontal month selector is scrolled to the end (latest)
   React.useEffect(() => {
     const el = monthsScrollRef.current;
     if (!el) return;
@@ -157,7 +156,6 @@ export default function Transactions() {
           </div>
         </div>
       ) : null}
-      {/* Month selector */}
       <div className='sticky top-[104px] z-10 -mx-4 bg-[--background]'>
         <div
           ref={monthsScrollRef}
@@ -200,7 +198,6 @@ export default function Transactions() {
         </div>
       </div>
 
-      {/* Scrollable list */}
       <div className='max-h-[calc(100dvh-180px)] overflow-y-auto pb-8'>
         {loading ? (
           <div className='mt-4 space-y-4'>
@@ -236,7 +233,8 @@ export default function Transactions() {
                       <Transaction
                         title={t.title}
                         time={formatTime(d)}
-                        amountPrimary={t.amountPrimary}
+                        tokenSymbol={t.tokenSymbol}
+                        tokenAmount={t.tokenAmount}
                         amountUsd={t.amountUsd}
                         direction={t.direction}
                       />

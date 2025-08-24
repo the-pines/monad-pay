@@ -38,7 +38,8 @@ export default function RecentTransactions() {
               <Transaction
                 title={t.title}
                 time={formatTime(d)}
-                amountPrimary={t.amountPrimary}
+                tokenSymbol={t.tokenSymbol}
+                tokenAmount={t.tokenAmount}
                 amountUsd={t.amountUsd}
                 direction={t.direction}
               />

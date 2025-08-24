@@ -4,9 +4,72 @@ import React from "react";
 
 import { Card } from "@/components/ui";
 import { useUser } from "@/contexts/UserContext";
+import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { parseUnits } from "viem";
+import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 
 export default function Portfolio() {
   const { portfolio, isFetchingPortfolio } = useUser();
+  const { address, chain } = useAccount();
+  const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
+
+  const [showSwap, setShowSwap] = React.useState(false);
+  const [swapAnimIn, setSwapAnimIn] = React.useState(false);
+  const monBalance = React.useMemo(() => {
+    const mon = portfolio.find((t) => t.symbol === "MON");
+    return mon?.amount ?? 0;
+  }, [portfolio]);
+
+  const handleSwapAllButGas = async () => {
+    try {
+      if (!address || !publicClient || !walletClient) return;
+      const chainId = chain?.id ?? 1;
+
+      const amountToKeep = 0.02; // leave for gas
+      const sellAmountMon = Math.max(0, monBalance - amountToKeep);
+      if (sellAmountMon <= 0) return;
+
+      const sellAmountWei = parseUnits(String(sellAmountMon), 18);
+
+      const params = new URLSearchParams({
+        chainId: String(chainId),
+        sellToken: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // MON as native
+        buyToken: "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701", // WMON address from config
+        sellAmount: sellAmountWei.toString(),
+        taker: address,
+        slippagePercentage: "0.01",
+      });
+
+      const res = await fetch(`/api/swap/quote?${params.toString()}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error("Failed to get quote");
+      const quote = await res.json();
+
+      const to = (quote?.transaction?.to ?? quote?.to) as `0x${string}`;
+      const data = (quote?.transaction?.data ?? quote?.data) as `0x${string}`;
+      const gas = quote?.transaction?.gas
+        ? BigInt(quote.transaction.gas)
+        : undefined;
+      const value = quote?.transaction?.value
+        ? BigInt(quote.transaction.value)
+        : undefined;
+
+      await walletClient.sendTransaction({
+        account: walletClient.account!,
+        to,
+        data,
+        gas,
+        value,
+        chain,
+      });
+
+      setShowSwap(false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const format = (n: number) =>
     n.toLocaleString(undefined, { maximumFractionDigits: 6 });
@@ -37,7 +100,7 @@ export default function Portfolio() {
                 key={`${t.symbol}-${t.decimals}`}
                 className='w-full px-3 py-3 flex items-center'
               >
-                <div className='flex items-center gap-3'>
+                <div className='flex items-center gap-3 flex-1'>
                   <span className='text-xl leading-none'>
                     {tokenEmoji[t.symbol] ?? "🪙"}
                   </span>
@@ -45,9 +108,68 @@ export default function Portfolio() {
                     {format(t.amount)} {t.symbol}
                   </span>
                 </div>
+                {t.symbol === "MON" && t.amount > 0 ? (
+                  <button
+                    type='button'
+                    className='ml-3 text-[#FF5CAA] hover:text-[#FF5CAA]/90'
+                    title='The card cannot spend MON, please swap to WMON'
+                    onClick={() => {
+                      setShowSwap(true);
+                      setTimeout(() => setSwapAnimIn(true), 10);
+                    }}
+                  >
+                    <ExclamationCircleIcon className='h-6 w-6' />
+                  </button>
+                ) : null}
               </Card>
             ))}
       </div>
+
+      {showSwap ? (
+        <div
+          className={
+            "fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm transition-opacity duration-200 " +
+            (swapAnimIn ? "opacity-100" : "opacity-0")
+          }
+        >
+          <div
+            className={
+              "rounded-2xl bg-[#2a1b68] border border-[var(--card-border)] p-5 w-[min(92vw,420px)] soft-shadow transform transition-all duration-200 ease-out " +
+              (swapAnimIn
+                ? "opacity-100 scale-100 translate-y-0"
+                : "opacity-0 scale-95 translate-y-2")
+            }
+          >
+            <div className='text-lg font-semibold text-[--foreground]'>
+              Swap MON to WMON
+            </div>
+            <div className='mt-2 text-[--foreground]/80 text-sm'>
+              The card cannot spend MON, please swap to WMON.
+            </div>
+            <div className='mt-5 flex items-center justify-end gap-2'>
+              <button
+                type='button'
+                onClick={() => {
+                  setSwapAnimIn(false);
+                  setTimeout(() => setShowSwap(false), 220);
+                }}
+                className='px-3 py-2 rounded-lg bg-[var(--card-surface)] border border-[var(--card-border)] text-[--foreground]/80 hover:bg-[var(--card-surface-hover)]'
+              >
+                Cancel
+              </button>
+              {monBalance > 0.02 ? (
+                <button
+                  type='button'
+                  onClick={handleSwapAllButGas}
+                  className='px-3 py-2 rounded-lg bg-white/15 text-[--foreground] hover:bg-white/20'
+                >
+                  Swap
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
