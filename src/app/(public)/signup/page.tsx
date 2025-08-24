@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAppKitAccount, useDisconnect } from "@reown/appkit/react";
-import { generateRandomCardholder } from "@/lib/create-fake-form-data";
-import { SERVER_WALLET_ADDRESS } from "@/config/contracts";
-import { ERC20_TOKENS } from "@/config/tokens";
-import { isAddress, type Address } from "viem";
-import { erc20Abi } from "viem";
-import { useConfig } from "wagmi";
-import { readContract } from "wagmi/actions";
+import Image from 'next/image';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAppKitAccount, useDisconnect } from '@reown/appkit/react';
+import { generateRandomCardholder } from '@/lib/create-fake-form-data';
+import { SERVER_WALLET_ADDRESS } from '@/config/contracts';
+import { ERC20_TOKENS } from '@/config/tokens';
+import { isAddress, type Address } from 'viem';
+import { erc20Abi } from 'viem';
+import { useConfig } from 'wagmi';
+import { readContract } from 'wagmi/actions';
 import {
   buildCardholderBody,
   createUser as createUserApi,
   ensureTokenApprovals,
   generateDOBWithinAgeRange,
-} from "@/lib/signup";
+} from '@/lib/signup';
 
 type CardholderBody = Parameters<typeof buildCardholderBody>[0] extends never
   ? never
@@ -34,21 +34,21 @@ export default function SignUpPage() {
   const [step, setStep] = useState<Step>(1);
 
   // Required
-  const [name, setName] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [dobDay, setDobDay] = useState<number>(1);
   const [dobMonth, setDobMonth] = useState<number>(1);
   const [dobYear, setDobYear] = useState<number>(1990);
 
-  const [line1, setLine1] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [postalCode, setPostalCode] = useState("");
+  const [line1, setLine1] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [postalCode, setPostalCode] = useState('');
 
   // Optional
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
   // token selection
   const [selected, setSelected] = useState<Record<string, boolean>>({});
@@ -68,7 +68,7 @@ export default function SignUpPage() {
       e.preventDefault();
       setError(null);
       if (!address || !isAddress(address)) {
-        setError("Wallet not connected");
+        setError('Wallet not connected');
         return;
       }
 
@@ -115,24 +115,20 @@ export default function SignUpPage() {
     setCity(d.billing.address.city);
     setState(d.billing.address.state);
     setPostalCode(d.billing.address.postal_code);
-    setEmail(d.email ?? "");
-    setPhone(d.phone_number ?? "");
+    setEmail(d.email ?? '');
+    setPhone(d.phone_number ?? '');
   }, []);
-
-  useEffect(() => {
-    if (!isConnected) router.replace("/login?next=/signup");
-  }, [isConnected, router]);
 
   const onBack = useCallback(async () => {
     try {
       await disconnect();
     } finally {
-      router.replace("/login");
+      router.replace('/login');
     }
   }, [disconnect, router]);
 
   const usdcToken = useMemo(
-    () => ERC20_TOKENS.find((t) => t.symbol === "USDC"),
+    () => ERC20_TOKENS.find((t) => t.symbol === 'USDC'),
     []
   );
 
@@ -159,11 +155,11 @@ export default function SignUpPage() {
   const approveSelected = useCallback(async () => {
     if (!address || !pendingBody) return;
     if (!usdcToken) {
-      setError("USDC not configured");
+      setError('USDC not configured');
       return;
     }
     if (!SERVER_WALLET_ADDRESS || !isAddress(SERVER_WALLET_ADDRESS)) {
-      setError("Delegator address is not configured");
+      setError('Delegator address is not configured');
       return;
     }
     setSubmitting(true);
@@ -182,24 +178,28 @@ export default function SignUpPage() {
       const usdcAllowance = (await readContract(wagmiCfg, {
         address: usdcToken.address as Address,
         abi: erc20Abi,
-        functionName: "allowance",
+        functionName: 'allowance',
         args: [address as Address, SERVER_WALLET_ADDRESS as Address],
       })) as bigint;
 
       if (usdcAllowance === BigInt(0)) {
-        throw new Error("USDC approval required to proceed");
+        throw new Error('USDC approval required to proceed');
       }
 
       // create account after approvals
       await createUserApi(pendingBody);
-      router.replace("/");
+      router.replace('/');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Approval failed";
+      const msg = err instanceof Error ? err.message : 'Approval failed';
       setError(msg);
     } finally {
       setSubmitting(false);
     }
   }, [address, pendingBody, selectedTokens, usdcToken, wagmiCfg, router]);
+
+  useEffect(() => {
+    if (!isConnected) router.replace('/login?next=/signup');
+  }, [isConnected, router]);
 
   return (
     <main className="relative min-h-[100svh] overflow-hidden">
@@ -209,8 +209,7 @@ export default function SignUpPage() {
         <div className="w-full flex items-center justify-between">
           <button
             onClick={onBack}
-            className="text-white/80 hover:text-white text-sm flex items-center gap-2"
-          >
+            className="text-white/80 hover:text-white text-sm flex items-center gap-2">
             <span className="inline-block h-5 w-5 rounded-full bg-white/15 grid place-items-center">
               ←
             </span>
@@ -233,9 +232,9 @@ export default function SignUpPage() {
         <div className="w-full max-w-[640px]">
           <div className="text-center space-y-3 mb-6">
             <h1 className="display text-3xl sm:text-[32px] font-semibold leading-tight">
-              {step === 1 && "Set up your account"}
-              {step === 2 && "Select tokens to approve"}
-              {step === 3 && "Approve selected tokens"}
+              {step === 1 && 'Set up your account'}
+              {step === 2 && 'Select tokens to approve'}
+              {step === 3 && 'Approve selected tokens'}
             </h1>
             {step === 1 && (
               <p className="text-white/70 text-sm leading-relaxed max-w-[46ch] mx-auto">
@@ -266,8 +265,7 @@ export default function SignUpPage() {
                 <div>
                   <label
                     htmlFor="name"
-                    className="mb-1 block text-xs font-medium text-white/80"
-                  >
+                    className="mb-1 block text-xs font-medium text-white/80">
                     Display name (max 24 characters)*
                   </label>
                   <input
@@ -318,8 +316,7 @@ export default function SignUpPage() {
 
                 <button
                   type="submit"
-                  className="w-full rounded-2xl py-3 font-semibold text-black/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-white/40 animated-gradient"
-                >
+                  className="w-full rounded-2xl py-3 font-semibold text-black/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-white/40 animated-gradient">
                   Next
                 </button>
               </form>
@@ -330,12 +327,11 @@ export default function SignUpPage() {
                 <div className="space-y-2">
                   {ERC20_TOKENS.map((t) => {
                     const checked = !!selected[t.address];
-                    const isUsdc = t.symbol === "USDC";
+                    const isUsdc = t.symbol === 'USDC';
                     return (
                       <label
                         key={t.address}
-                        className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3"
-                      >
+                        className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3">
                         <div className="flex items-center gap-3">
                           <span className="text-sm font-medium">
                             {t.symbol}
@@ -367,14 +363,12 @@ export default function SignUpPage() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setStep(1)}
-                    className="flex-1 rounded-2xl py-3 font-semibold border border-white/15"
-                  >
+                    className="flex-1 rounded-2xl py-3 font-semibold border border-white/15">
                     Back
                   </button>
                   <button
                     onClick={() => setStep(3)}
-                    className="flex-1 rounded-2xl py-3 font-semibold text-black/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-white/40 animated-gradient"
-                  >
+                    className="flex-1 rounded-2xl py-3 font-semibold text-black/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-white/40 animated-gradient">
                     Next
                   </button>
                 </div>
@@ -396,8 +390,7 @@ export default function SignUpPage() {
                   <button
                     type="button"
                     onClick={() => setAckTwoClicks(true)}
-                    className="w-full rounded-2xl py-3 font-semibold border border-white/15 bg-white/5 text-white/90 hover:bg-white/10"
-                  >
+                    className="w-full rounded-2xl py-3 font-semibold border border-white/15 bg-white/5 text-white/90 hover:bg-white/10">
                     You&apos;ll need to click twice — first to sign, then to
                     approve
                   </button>
@@ -413,16 +406,14 @@ export default function SignUpPage() {
                   <button
                     onClick={() => setStep(2)}
                     disabled={submitting}
-                    className="flex-1 rounded-2xl py-3 font-semibold border border-white/15 disabled:opacity-60"
-                  >
+                    className="flex-1 rounded-2xl py-3 font-semibold border border-white/15 disabled:opacity-60">
                     Back
                   </button>
                   <button
                     onClick={approveSelected}
                     disabled={submitting || !ackTwoClicks}
-                    className="flex-1 rounded-2xl py-3 font-semibold text-black/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-white/40 animated-gradient disabled:opacity-60"
-                  >
-                    {submitting ? "Confirm in wallet..." : "Approve & Create"}
+                    className="flex-1 rounded-2xl py-3 font-semibold text-black/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-white/40 animated-gradient disabled:opacity-60">
+                    {submitting ? 'Confirm in wallet...' : 'Approve & Create'}
                   </button>
                 </div>
                 <p className="text-xs text-white/60 text-center">

@@ -61,8 +61,7 @@ export async function POST(req: NextRequest) {
       balance: dbUser.balance,
       card: {
         displayName: stripeCard.cardholder.name,
-        expMonth: stripeCard.exp_month,
-        expYear: stripeCard.exp_year,
+        expiry: `${stripeCard.exp_month}/${stripeCard.exp_year}`,
         number: stripeCard.number,
         cvc: stripeCard.cvc,
       },

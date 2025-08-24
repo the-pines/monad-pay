@@ -1,28 +1,21 @@
-"use client";
+'use client';
 
-import React from "react";
-import { usePortfolio } from "@/hooks";
-import { Card } from "@/components/ui";
+import React from 'react';
+
+import { Card } from '@/components/ui';
+import { useUser } from '@/contexts/UserContext';
 
 export default function Portfolio() {
-  const { data, loading } = usePortfolio();
-
-  if (loading && (!data || data.length === 0)) {
-    return null;
-  }
-
-  if (!data || data.length === 0) {
-    return null;
-  }
+  const { portfolio } = useUser();
 
   const format = (n: number) =>
     n.toLocaleString(undefined, { maximumFractionDigits: 6 });
 
   const tokenEmoji: Record<string, string> = {
-    MON: "🟣",
-    USDC: "💵",
-    WETH: "💎",
-    WBTC: "🟠",
+    MON: '🟣',
+    USDC: '💵',
+    WETH: '💎',
+    WBTC: '🟠',
   };
 
   return (
@@ -31,14 +24,13 @@ export default function Portfolio() {
         Portfolio
       </h2>
       <div className="space-y-2">
-        {data.map((t) => (
+        {portfolio.map((t) => (
           <Card
             key={`${t.symbol}-${t.decimals}`}
-            className="w-full px-3 py-3 flex items-center"
-          >
+            className="w-full px-3 py-3 flex items-center">
             <div className="flex items-center gap-3">
               <span className="text-xl leading-none">
-                {tokenEmoji[t.symbol] ?? "🪙"}
+                {tokenEmoji[t.symbol] ?? '🪙'}
               </span>
               <span className="amount font-bold text-[16px] leading-5 text-[--foreground] tabular-nums">
                 {format(t.amount)} {t.symbol}

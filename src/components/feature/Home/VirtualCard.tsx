@@ -1,32 +1,24 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import React, { useMemo, useState, useCallback } from "react";
-import { RiVisaLine } from "react-icons/ri";
-import clsx from "clsx";
+import clsx from 'clsx';
+import Image from 'next/image';
+import { RiVisaLine } from 'react-icons/ri';
+import { useMemo, useState, useCallback } from 'react';
 
-/**
- * VirtualCard
- * - Symmetric padding (no absolute layout for primary content)
- * - Fixed aspect ratio (credit card ~1.68:1)
- * - Front shows masked number/CVV; Back shows full
- * - Brand gradient + soft border + subtle shimmer
- * - Space Grotesk for display elements, Satoshi for labels/body
- */
 type VirtualCardProps = {
   cardholderName: string;
   cardNumber: string;
-  expiry: string; // "12/2028"
-  cvv: string; // "210"
+  expiry: string;
+  cvc: string;
   className?: string;
-  masked?: boolean; // default true on front
+  masked?: boolean;
 };
 
 export default function VirtualCard({
   cardholderName,
   cardNumber,
   expiry,
-  cvv,
+  cvc,
   className,
   masked = true,
 }: VirtualCardProps) {
@@ -40,7 +32,7 @@ export default function VirtualCard({
   const toggle = useCallback(() => setIsFlipped((p) => !p), []);
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (e.key === "Enter" || e.key === " ") {
+      if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         toggle();
       }
@@ -51,25 +43,23 @@ export default function VirtualCard({
   return (
     <div
       className={clsx(
-        "group relative w-[335px] sm:w-[360px] md:w-[380px] aspect-[1.68/1] cursor-pointer",
+        'group relative w-[335px] sm:w-[360px] md:w-[380px] aspect-[1.68/1] cursor-pointer',
         className
       )}
       role="button"
       tabIndex={0}
       aria-pressed={isFlipped}
-      aria-label={isFlipped ? "Show front of card" : "Show back of card"}
+      aria-label={isFlipped ? 'Show front of card' : 'Show back of card'}
       title="Tap or press Enter to flip"
       onClick={toggle}
       onKeyDown={onKeyDown}
-      style={{ perspective: 1000 }}
-    >
+      style={{ perspective: 1000 }}>
       <div
         className="relative size-full transition-transform duration-500 ease-out"
         style={{
-          transformStyle: "preserve-3d",
-          transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
-        }}
-      >
+          transformStyle: 'preserve-3d',
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+        }}>
         {/* FRONT */}
         <CardFace>
           <CardChrome />
@@ -77,7 +67,7 @@ export default function VirtualCard({
             cardholderName={cardholderName}
             number={masked ? maskedNumber : groupedNumber}
             expiry={expiry}
-            cvv="***"
+            cvc="***"
             rightBrand
           />
         </CardFace>
@@ -89,7 +79,7 @@ export default function VirtualCard({
             cardholderName={cardholderName}
             number={groupedNumber}
             expiry={expiry}
-            cvv={cvv}
+            cvc={cvc}
             rightBrand
           />
         </CardFace>
@@ -110,15 +100,14 @@ function CardFace({
   return (
     <div
       className={clsx(
-        "absolute inset-0 rounded-3xl overflow-hidden border border-white/10",
-        "bg-[radial-gradient(120%_140%_at_-10%_-10%,#8A76F9_0%,#6d5be6_45%,#503fcf_75%,#2a1b68_100%)]",
-        "shadow-[0_18px_45px_rgba(0,0,0,.35)] will-change-transform"
+        'absolute inset-0 rounded-3xl overflow-hidden border border-white/10',
+        'bg-[radial-gradient(120%_140%_at_-10%_-10%,#8A76F9_0%,#6d5be6_45%,#503fcf_75%,#2a1b68_100%)]',
+        'shadow-[0_18px_45px_rgba(0,0,0,.35)] will-change-transform'
       )}
       style={{
-        backfaceVisibility: "hidden",
-        transform: back ? "rotateY(180deg)" : "rotateY(0deg)",
-      }}
-    >
+        backfaceVisibility: 'hidden',
+        transform: back ? 'rotateY(180deg)' : 'rotateY(0deg)',
+      }}>
       {/* subtle world map */}
       <Image
         src="/assets/worldmap.png"
@@ -170,16 +159,16 @@ function CardContent({
   cardholderName,
   number,
   expiry,
-  cvv,
+  cvc,
   rightBrand = false,
 }: {
   cardholderName: string;
   number: string;
   expiry: string;
-  cvv: string;
+  cvc: string;
   rightBrand?: boolean;
 }) {
-  const groups = number.split(" "); // works for masked and grouped
+  const groups = number.split(' '); // works for masked and grouped
   return (
     <div className="flex h-full flex-col">
       {/* Spacer at top for chip/logo */}
@@ -192,8 +181,7 @@ function CardContent({
             {groups.map((g, i) => (
               <span
                 key={i}
-                className="whitespace-nowrap text-[clamp(18px,4.2vw,22px)]"
-              >
+                className="whitespace-nowrap text-[clamp(18px,4.2vw,22px)]">
                 {g}
               </span>
             ))}
@@ -213,8 +201,8 @@ function CardContent({
               <div className="text-white text-[14px] mt-0.5">{expiry}</div>
             </div>
             <div>
-              <div className="text-white/60 text-[11.5px]">CVV</div>
-              <div className="text-white text-[14px] mt-0.5">{cvv}</div>
+              <div className="text-white/60 text-[11.5px]">CVC</div>
+              <div className="text-white text-[14px] mt-0.5">{cvc}</div>
             </div>
           </div>
         </div>
@@ -232,11 +220,11 @@ function CardContent({
 /* ---------- Helpers ---------- */
 
 function groupCardNumber(value: string): string {
-  const digits = value.replace(/\D/g, "");
-  return digits.replace(/(.{4})/g, "$1 ").trim();
+  const digits = value.replace(/\D/g, '');
+  return digits.replace(/(.{4})/g, '$1 ').trim();
 }
 function maskCardNumber(value: string): string {
-  const digits = value.replace(/\D/g, "");
-  const last4 = digits.slice(-4).padStart(4, "*");
+  const digits = value.replace(/\D/g, '');
+  const last4 = digits.slice(-4).padStart(4, '*');
   return `**** **** **** ${last4}`.trim();
 }

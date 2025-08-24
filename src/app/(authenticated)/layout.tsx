@@ -3,6 +3,7 @@
 import { Toaster } from '@/components/ui';
 import { Header, Navigation } from '@/components/layout';
 import AuthProvider from '@/contexts/AuthContext';
+import UserProvider from '@/contexts/UserContext';
 import PageTransition from '@/app/page-transition';
 
 export default function AuthenticatedLayout({
