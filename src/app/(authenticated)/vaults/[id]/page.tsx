@@ -21,7 +21,6 @@ import { parseUnits } from "viem";
 import { VAULT_ABI } from "@/config/contracts";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import { formatToken } from "@/lib/format";
-import { useUser } from "@/contexts/UserContext";
 import { Button } from "@/components/ui";
 
 export default function VaultDetailPage() {
@@ -30,7 +29,6 @@ export default function VaultDetailPage() {
   const { data: vaults, loading: isVaultsLoading } = useVaults();
   const { isConnected, address } = useAccount();
   const { writeContractAsync } = useWriteContract();
-  const { balance: balanceUsd } = useUser();
 
   const [isAddFundsOpen, setIsAddFundsOpen] = React.useState(false);
   const [addAmount, setAddAmount] = React.useState<string>("");
@@ -365,10 +363,7 @@ export default function VaultDetailPage() {
               Add funds to {vault.name}
             </div>
             <div className='mt-2 text-sm text-white/70'>
-              Available balance:{" "}
-              {Number(balanceUsd ?? 0).toLocaleString(undefined, {
-                maximumFractionDigits: 0,
-              })}
+              Available balance: {formatToken(userTokenBalance, vault.symbol)}
             </div>
             <div className='mt-3'>
               <label className='block text-sm mb-1'>

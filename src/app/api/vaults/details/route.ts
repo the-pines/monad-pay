@@ -122,11 +122,16 @@ export async function GET(req: NextRequest) {
       abi: Abi;
       functionName: string;
     }> = [];
+    // Track mapping from vault index -> position within non-native token list
+    const nonNativeIndices: number[] = [];
+    const indexToNonNativePosition: Record<number, number> = {};
     assetAddresses.forEach((aa, i) => {
       const isNative = Boolean(
         (result[isNativeStart + i]?.result as boolean | undefined) ?? false
       );
       if (aa && !isNative) {
+        indexToNonNativePosition[i] = nonNativeIndices.length;
+        nonNativeIndices.push(i);
         erc20Contracts.push({
           address: aa,
           abi: ERC20_ABI_TYPED,
@@ -184,12 +189,19 @@ export async function GET(req: NextRequest) {
         decimals = 18;
         symbol = "MON";
       } else {
-        const dIdx = i * 2;
-        const sIdx = i * 2 + 1;
-        const dRes = erc20Results[dIdx]?.result as number | undefined;
-        const sRes = erc20Results[sIdx]?.result as string | undefined;
-        decimals = Number(dRes ?? 18);
-        symbol = String(sRes ?? "");
+        const nnPos = indexToNonNativePosition[i];
+        if (nnPos === undefined) {
+          decimals = 18;
+          symbol = "";
+        } else {
+          const nonNativeCount = nonNativeIndices.length;
+          const dRes = erc20Results[nnPos]?.result as number | undefined;
+          const sRes = erc20Results[nonNativeCount + nnPos]?.result as
+            | string
+            | undefined;
+          decimals = Number(dRes ?? 18);
+          symbol = String(sRes ?? "");
+        }
       }
 
       const toUnits = (x: bigint, d: number) => Number(x) / 10 ** d;
