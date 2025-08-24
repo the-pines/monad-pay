@@ -36,12 +36,6 @@ function isZeroValue(raw: unknown): boolean {
   return Number.isFinite(n) ? n === 0 : false;
 }
 
-function isMaxUint256Hex(raw: string | undefined): boolean {
-  if (!raw) return false;
-  const s = raw.toLowerCase();
-  return s.length === 66 && /^0x[f]+$/.test(s);
-}
-
 function toPaddedTopicAddress(address: string): `0x${string}` {
   const addr = address.startsWith("0x") ? address.slice(2) : address;
   return `0x${"0".repeat(24)}${addr.toLowerCase()}` as `0x${string}`;
@@ -242,7 +236,6 @@ export async function GET(req: NextRequest) {
           const isOut = ownerAddr === address.toLowerCase();
           const token = knownErc20ByAddress.get(l.address.toLowerCase());
           const symbol = token?.symbol ?? "TOKEN";
-          const raw = l.data ?? ("0x0" as `0x${string}`);
           const amountUsd = undefined as number | undefined;
           const blockTsSec = blockNumberToTimestamp.get(Number(l.block_number));
           const datetime = blockTsSec

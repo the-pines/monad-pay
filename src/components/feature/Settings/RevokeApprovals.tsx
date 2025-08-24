@@ -51,13 +51,13 @@ export default function RevokeApprovals() {
             token: t,
             allowance: BigInt(0),
             loading: false,
-            error: "read_failed",
+            error: `read_failed: ${err}`,
           });
         }
       }
       setItems(results);
     } catch (err) {
-      setError("Failed to load allowances");
+      setError(`Failed to load allowances: ${err}`);
     } finally {
       setRefreshing(false);
     }
