@@ -6,45 +6,87 @@ import {Vault} from "./Vault.sol";
 
 /**
  * @notice Deploys vaults that hold either ERC20 OR native MON (chosen at creation).
+ *        
  */
 contract VaultFactory {
+    // Errors
+    error InvalidOwner();
+
     event VaultCreated(
-        address indexed creator,
+        address indexed deployer,
+        address indexed owner,
         address vault,
-        address indexed asset, // zero address when native
+        address indexed asset,
         bool isNative,
         uint256 goal,
         string name
     );
 
-    mapping(address => address[]) private _creatorVaults;
+    // Indexes
+    mapping(address => address[]) private _ownerVaults;    // owner => vaults
+    mapping(address => address[]) private _deployerVaults; // deployer => vaults
     address[] private _allVaults;
 
-    /// @notice Create an ERC20-denominated vault.
-    function createVaultERC20(IERC20 asset, uint256 goal, string calldata name)
-        external
-        returns (address vault)
-    {
-        vault = address(new Vault(msg.sender, asset, false, goal, name));
-        _creatorVaults[msg.sender].push(vault);
+
+    /// @notice Create an ERC20-denominated vault for `owner`.
+    function createVaultERC20For(
+        address owner,
+        IERC20 asset,
+        uint256 goal,
+        string calldata name
+    ) public returns (address vault) {
+        if (owner == address(0)) revert InvalidOwner();
+        vault = address(new Vault(owner, asset, false, goal, name));
+        _ownerVaults[owner].push(vault);
+        _deployerVaults[msg.sender].push(vault);
         _allVaults.push(vault);
-        emit VaultCreated(msg.sender, vault, address(asset), false, goal, name);
+        emit VaultCreated(msg.sender, owner, vault, address(asset), false, goal, name);
     }
 
-    /// @notice Create a native MON vault.
-    /// @dev `goal` is in wei.
-    function createVaultNative(uint256 goal, string calldata name)
-        external
-        returns (address vault)
-    {
-        vault = address(new Vault(msg.sender, IERC20(address(0)), true, goal, name));
-        _creatorVaults[msg.sender].push(vault);
+    /// @notice Create a native MON vault for `owner`. `goal` is in wei.
+    function createVaultNativeFor(
+        address owner,
+        uint256 goal,
+        string calldata name
+    ) public returns (address vault) {
+        if (owner == address(0)) revert InvalidOwner();
+        vault = address(new Vault(owner, IERC20(address(0)), true, goal, name));
+        _ownerVaults[owner].push(vault);
+        _deployerVaults[msg.sender].push(vault);
         _allVaults.push(vault);
-        emit VaultCreated(msg.sender, vault, address(0), true, goal, name);
+        emit VaultCreated(msg.sender, owner, vault, address(0), true, goal, name);
     }
 
+// backwrads compaitilbity 
+    function createVaultERC20(
+        IERC20 asset,
+        uint256 goal,
+        string calldata name
+    ) external returns (address vault) {
+        return createVaultERC20For(msg.sender, asset, goal, name);
+    }
+
+    function createVaultNative(
+        uint256 goal,
+        string calldata name
+    ) external returns (address vault) {
+        return createVaultNativeFor(msg.sender, goal, name);
+    }
+
+    // -------- Views --------
+
+    function getOwnerVaults(address owner) external view returns (address[] memory) {
+        return _ownerVaults[owner];
+    }
+
+    /// @notice Vaults deployed by a given factory caller.
+    function getDeployerVaults(address deployer) external view returns (address[] memory) {
+        return _deployerVaults[deployer];
+    }
+
+    /// @dev Alias to ease migration if you previously used "creator".
     function getCreatorVaults(address creator) external view returns (address[] memory) {
-        return _creatorVaults[creator];
+        return _ownerVaults[creator];
     }
 
     function allVaultsLength() external view returns (uint256) {
