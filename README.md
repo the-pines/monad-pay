@@ -48,7 +48,7 @@ Every time the user attempts to use their card, we are gonna receive an event in
 
 ### Database Schema
 
-![database schema](database-schema.png)
+![alt text](database-schema.png)
 
 ## Tech Stack
 
