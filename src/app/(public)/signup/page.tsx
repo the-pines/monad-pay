@@ -56,7 +56,7 @@ export default function SignUpPage() {
   // request state
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [ackTwoClicks, setAckTwoClicks] = useState(false);
+  const [phase, setPhase] = useState<'idle' | 'approving' | 'creating'>('idle');
 
   // persisted body between steps
   const [pendingBody, setPendingBody] = useState<CardholderBody | null>(null);
@@ -163,6 +163,7 @@ export default function SignUpPage() {
       return;
     }
     setSubmitting(true);
+    setPhase('approving');
     setError(null);
 
     try {
@@ -187,13 +188,14 @@ export default function SignUpPage() {
       }
 
       // create account after approvals
+      setPhase('creating');
       await createUserApi(pendingBody);
       router.replace('/');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Approval failed';
       setError(msg);
-    } finally {
       setSubmitting(false);
+      setPhase('idle');
     }
   }, [address, pendingBody, selectedTokens, usdcToken, wagmiCfg, router]);
 
@@ -253,8 +255,8 @@ export default function SignUpPage() {
             )}
             {step === 3 && (
               <p className="text-white/70 text-sm leading-relaxed max-w-[56ch] mx-auto">
-                Confirm the approval transactions in your wallet. This lets us
-                settle payments on your behalf.
+                Confirm the approval transactions in your wallet. This lets the
+                card settle payments on your behalf
               </p>
             )}
           </div>
@@ -385,17 +387,6 @@ export default function SignUpPage() {
                     ))}
                   </ul>
                 </div>
-
-                {!ackTwoClicks && (
-                  <button
-                    type="button"
-                    onClick={() => setAckTwoClicks(true)}
-                    className="w-full rounded-2xl py-3 font-semibold border border-white/15 bg-white/5 text-white/90 hover:bg-white/10">
-                    You&apos;ll need to click twice — first to sign, then to
-                    approve
-                  </button>
-                )}
-
                 {error && (
                   <div className="rounded-xl border border-red-200/40 bg-red-400/10 px-3 py-2 text-sm text-red-200">
                     {error}
@@ -411,14 +402,18 @@ export default function SignUpPage() {
                   </button>
                   <button
                     onClick={approveSelected}
-                    disabled={submitting || !ackTwoClicks}
+                    disabled={submitting}
                     className="flex-1 rounded-2xl py-3 font-semibold text-black/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-white/40 animated-gradient disabled:opacity-60">
-                    {submitting ? 'Confirm in wallet...' : 'Approve & Create'}
+                    {submitting
+                      ? phase === 'approving'
+                        ? 'Approve in wallet...'
+                        : 'Creating account...'
+                      : 'Approve tokens'}
                   </button>
                 </div>
                 <p className="text-xs text-white/60 text-center">
-                  Your wallet may show multiple prompts if you selected several
-                  tokens.
+                  If you selected several tokens, you&apos;ll see several
+                  prompts
                 </p>
               </div>
             )}

@@ -42,11 +42,11 @@ function useAsync<T>(
   return state;
 }
 
-export function useUserTransactions() {
+export function useUserTransactions(limit?: number, fromBlock?: number) {
   const { address } = useAccount();
   return useAsync<UiTransaction[]>(
-    () => fetchUserTransactions(address),
-    [address]
+    () => fetchUserTransactions(address, { limit, fromBlock }),
+    [address, limit, fromBlock]
   );
 }
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Toaster } from '@/components/ui';
 import { Header, Navigation } from '@/components/layout';
 import AuthProvider from '@/contexts/AuthContext';
 import UserProvider from '@/contexts/UserContext';
@@ -22,7 +21,6 @@ export default function AuthenticatedLayout({
       </main>
 
       <Navigation />
-      <Toaster />
     </>
   );
 }

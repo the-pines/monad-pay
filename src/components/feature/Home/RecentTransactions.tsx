@@ -3,7 +3,7 @@ import Transaction from "@/components/ui/Transaction";
 import { useUserTransactions } from "@/hooks";
 
 export default function RecentTransactions() {
-  const { data } = useUserTransactions();
+  const { data } = useUserTransactions(3);
   const latest3 = React.useMemo(() => {
     const items = data ?? [];
     return [...items]
@@ -22,17 +22,17 @@ export default function RecentTransactions() {
     }).format(date);
 
   return (
-    <div className="mt-6">
-      <h2 className="mb-4 text-sm leading-6 font-medium tracking-wide text-[--foreground]/70">
+    <div className='mt-6'>
+      <h2 className='mb-4 text-sm leading-6 font-medium tracking-wide text-[--foreground]/70'>
         Recent transactions
       </h2>
-      <div className="space-y-2">
+      <div className='space-y-2'>
         {latest3.map((t, idx) => {
           const d = new Date(t.datetime);
           return (
             <div
               key={t.id}
-              className="motion-safe:animate-[slideIn_300ms_ease-out_forwards] opacity-0"
+              className='motion-safe:animate-[slideIn_300ms_ease-out_forwards] opacity-0'
               style={{ animationDelay: `${idx * 60}ms` }}
             >
               <Transaction
