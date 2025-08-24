@@ -1,16 +1,23 @@
-"use client";
+'use client';
 
-import { useAppKitAccount } from "@reown/appkit/react";
+import { useAppKitAccount } from '@reown/appkit/react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 interface AuthProviderProps {
   children: React.ReactNode;
 }
 
 const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  // Middleware enforces auth and onboarding. Avoid client-side redirects here
-  // to prevent race conditions during route transitions.
-  // Keep hook to ensure provider re-renders on connection changes if needed.
-  useAppKitAccount();
+  const router = useRouter();
+
+  const { isConnected } = useAppKitAccount();
+
+  useEffect(() => {
+    if (isConnected) return;
+    router.replace('/login');
+  }, [router, isConnected]);
+
   return <>{children}</>;
 };
 
