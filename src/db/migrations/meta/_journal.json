@@ -15,6 +15,13 @@
       "when": 1755982587642,
       "tag": "0001_dry_shape",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1756012323277,
+      "tag": "0002_acoustic_blizzard",
+      "breakpoints": true
     }
   ]
 }

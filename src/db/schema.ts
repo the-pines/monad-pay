@@ -64,7 +64,8 @@ export const cards = pgTable('cards', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [
-    uniqueIndex("u_card_user").on(t.userId)
+    uniqueIndex("u_card_user").on(t.userId),
+    uniqueIndex('i_card_stripe_id').on(t.stripeCardId),
 ]);
 
 // prettier-ignore

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "i_card_stripe_id" ON "cards" USING btree ("stripe_card_id");
