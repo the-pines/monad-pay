@@ -1,7 +1,5 @@
 # Monad Pay
 
-:(
-
 ![Homepage](public/assets/docs/homepage.png)
 
 With Monad Pay, users can pay with _anything_, _anywhere._ We issue a virtual card for everyone so they can spend their Monad balance. They can use it anywhere that accepts VISA!
