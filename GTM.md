@@ -1,5 +1,49 @@
 # Go to market
 
+Legacy payment rails were not built for everyone. Card networks like Visa and Mastercard charge up to 3% fees per transaction, add FX markups, and impose random spending and location limits. In emerging markets like Mexico and Argentina, they aren’t accesible. 
+* 60% of adults in LATAM are unbanked or underbanked
+* In Mexico, 51% adults don’t have access to a bank account
+* In Argentina, inflation has surpassed 100% year after year, destroying trust in local banks and making cross-border payments impossible
+
+Crypto promised to solve this, but let’s be real - when was the last time you really paid with crypto?
+
+# Opportunity: Enter Monad Pay 
+
+The biggest opportunity is not competing with banks, it’s serving the billions of people they leave behind.
+* LATAM alone has 400M+ adults without reliable banking access
+* These communities already adopt crypto faster than the global average, but they struggle when it comes to actually spending their crypto
+* Monad Pay can become their first bank account, offering instant and borderless payments to and from any currency - much simpler than cash
+
+# Show me the money 
+
+As we scale, this wedge into the unbanked grows into a global opportunity:
+* The global card payments market is $14T annually
+* Visa processes 250B+ transactions per year across 4.3B cards, generating $35B+ in revenue, mostly from fees
+* Unlike Visa, Monad Pay doesn’t charge users. Instead, we monetize by staking and safely investing user balances. This is another proven business model in and outside of crypto
+
+Our GTM starts where the need is greatest, but because crypto is borderless, it can naturally expand to serve travelers, expats, and eventually mainstream fintech users in global hubs. This document covers our strategy to tap into each of these markets. 
+
+## Projections
+
+### LATAM Early Adoption
+
+If Monad Pay captures just 0.01% of LATAM’s population (~65,000 users):
+* Average balances: $100–$500
+* Treasury: $6.5M–$32.5M
+* Yield (3–8%): $200k–$2.6M annually
+This is an incredibly conservative estimate.
+
+### Global Adoption (Visa Scale)
+If Monad Pay reaches just 1% of Visa’s user base (~40M users):
+* Average balances: $100–$500
+* Treasury: $4B–$20B
+* Yield (3–8%): $120M–$1.6B annually
+Again, a conservative estimate.
+
+## Why Monad
+
+The unbanked don’t need another bank. They need a trust-minimized, gasless, borderless payments app that works instantly. Monad’s unique transaction finality makes this genuinely possible, without imposing security risks on us or introducing non-custodial methods, for the first time.
+
 We have built this app with GTM in mind, incorporating features that increase virality and community even when Monad is still on testnet. We believe that Monad Pay and the Monad Foundation can work closely together to build a narrative pushing how only Monad’s transaction finality allows for a payments app that so seamlessly flows into the real world. Launching alongside Monad’s mainnet will increase visibility for both brands and bring real users and liquidity to Monad from across the globe.
 
 The following document details how we envision our GTM strategy, and how a partnership with the Monad Foundation may look as we approach mainnet. We expect to roll out a full mainnet launch in 6 months.
