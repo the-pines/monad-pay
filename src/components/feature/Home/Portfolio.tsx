@@ -34,7 +34,7 @@ export default function Portfolio() {
       const params = new URLSearchParams({
         chainId: String(chainId),
         sellToken: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // MON as native
-        buyToken: "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701", // WMON address from config
+        buyToken: "0xf817257fed379853cDe0fa4F97AB987181B1E5Ea", // USDC address from config
         sellAmount: sellAmountWei.toString(),
         taker: address,
         slippagePercentage: "0.01",
@@ -113,7 +113,7 @@ export default function Portfolio() {
                   <button
                     type='button'
                     className='ml-3 inline-flex items-center justify-center px-3 py-1.5 rounded-2xl bg-blue-400/25 text-blue-300 hover:bg-blue-400/30 font-medium'
-                    title='Swap MON to WMON for card spend'
+                    title='Swap MON to USDC for card spend'
                     onClick={() => {
                       setShowSwap(true);
                       setTimeout(() => setSwapAnimIn(true), 10);
@@ -142,10 +142,12 @@ export default function Portfolio() {
             }
           >
             <div className='text-lg font-semibold text-[--foreground]'>
-              Swap MON to WMON
+              Swap MON to USDC
             </div>
             <div className='mt-2 text-[--foreground]/80 text-sm'>
-              The card cannot spend MON, please swap to WMON.
+              The card cannot spend MON, please swap to USDC. (Please note our
+              swapping API was rate-limited so this might fail - reach out if it
+              does!)
             </div>
             <div className='mt-5 flex items-center justify-end gap-2'>
               <button

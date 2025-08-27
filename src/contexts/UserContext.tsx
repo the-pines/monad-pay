@@ -156,7 +156,7 @@ const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         });
       });
 
-      // Fetch dynamic prices via 0x-backed oracle
+      // Fetch static USD prices
       const symbols = Array.from(new Set(items.map((i) => i.symbol)));
       const prices = await getUsdPricesForSymbols(symbols);
       for (const it of items) {

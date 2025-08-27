@@ -66,7 +66,7 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  // Only USDC approval is requested at this time
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -142,24 +142,10 @@ export default function SignUpPage() {
     []
   );
 
-  // ensure USDC is always selected
-  useEffect(() => {
-    if (step === 2 && usdcToken) {
-      setSelected((prev) => ({ ...prev, [usdcToken.address]: true }));
-    }
-  }, [step, usdcToken]);
-
-  const toggleToken = useCallback((addr: string) => {
-    setSelected((prev) => {
-      const next = { ...prev };
-      next[addr] = !next[addr];
-      return next;
-    });
-  }, []);
-
+  // Only USDC is selected/approved
   const selectedTokens = useMemo(
-    () => ERC20_TOKENS.filter((t) => selected[t.address]),
-    [selected]
+    () => (usdcToken ? [usdcToken] : []),
+    [usdcToken]
   );
 
   const approveSelected = useCallback(async () => {
@@ -248,8 +234,8 @@ export default function SignUpPage() {
           <div className='text-center space-y-3 mb-6'>
             <h1 className='display text-3xl sm:text-[32px] font-semibold leading-tight'>
               {step === 1 && "Set up your account"}
-              {step === 2 && "Select tokens to approve"}
-              {step === 3 && "Approve selected tokens"}
+              {step === 2 && "Approve USDC"}
+              {step === 3 && "Approve USDC"}
             </h1>
             {step === 1 && (
               <p className='text-white/70 text-sm leading-relaxed max-w-[46ch] mx-auto'>
@@ -355,34 +341,24 @@ export default function SignUpPage() {
             {step === 2 && (
               <div className='space-y-4'>
                 <div className='space-y-2'>
-                  {ERC20_TOKENS.map((t) => {
-                    const checked = !!selected[t.address];
-                    const isUsdc = t.symbol === "USDC";
-                    return (
-                      <label
-                        key={t.address}
-                        className='flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3'
-                      >
-                        <div className='flex items-center gap-3'>
-                          <span className='text-sm font-medium'>
-                            {t.symbol}
-                          </span>
-                          <span className='text-xs text-white/60'>
-                            {t.name}
-                          </span>
-                        </div>
-                        <input
-                          type='checkbox'
-                          checked={isUsdc ? true : checked}
-                          onChange={() =>
-                            !isUsdc ? toggleToken(t.address) : null
-                          }
-                          disabled={isUsdc}
-                          className='h-4 w-4'
-                        />
-                      </label>
-                    );
-                  })}
+                  {usdcToken ? (
+                    <label className='flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3'>
+                      <div className='flex items-center gap-3'>
+                        <span className='text-sm font-medium'>USDC</span>
+                        <span className='text-xs text-white/60'>USD Coin</span>
+                      </div>
+                      <input
+                        type='checkbox'
+                        checked={true}
+                        readOnly
+                        disabled
+                        className='h-4 w-4'
+                      />
+                    </label>
+                  ) : null}
+                  <p className='text-xs text-white/60 text-center'>
+                    Other ERC20s coming soon.
+                  </p>
                 </div>
 
                 {error && (

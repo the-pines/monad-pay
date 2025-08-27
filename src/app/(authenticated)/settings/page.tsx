@@ -1,26 +1,37 @@
-'use client';
+"use client";
 
-import LogoutButton from '@/components/feature/Settings/LogoutButton';
-import RevokeApprovals from '@/components/feature/Settings/RevokeApprovals';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import { useRouter } from 'next/navigation';
+import LogoutButton from "@/components/feature/Settings/LogoutButton";
+import RevokeApprovals from "@/components/feature/Settings/RevokeApprovals";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { useRouter } from "next/navigation";
+import { useAppKit, useAppKitAccount } from "@reown/appkit/react";
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { open } = useAppKit();
+  const { address, isConnected } = useAppKitAccount();
 
   return (
-    <div className="p-4">
+    <div className='p-4'>
       <button
-        type="button"
+        type='button'
         onClick={() => router.back()}
-        className="flex items-center gap-2 text-[#FBFAF9]">
-        <ArrowLeftIcon className="w-5 h-5" aria-hidden="true" />
-        <span className="text-base">Back</span>
+        className='flex items-center gap-2 text-[#FBFAF9]'
+      >
+        <ArrowLeftIcon className='w-5 h-5' aria-hidden='true' />
+        <span className='text-base'>Back</span>
       </button>
 
-      <h1 className="text-xl font-semibold mt-7 mb-4">Settings</h1>
+      <h1 className='text-xl font-semibold mt-7 mb-4'>Settings</h1>
 
-      <div className="space-y-6">
+      <div className='space-y-6'>
+        <button
+          type='button'
+          onClick={() => open()}
+          className='mt-3 w-full px-3 py-3 rounded-xl bg-white/10 border border-white/15 text-white/90 hover:bg-white/15'
+        >
+          View wallet
+        </button>
         <RevokeApprovals />
         <LogoutButton />
       </div>

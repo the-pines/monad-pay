@@ -47,8 +47,8 @@ export const ERC20_TOKENS: readonly KnownErc20Token[] = [
 
 // Static USD prices for display and total balance
 export const TOKEN_USD_PRICE: Readonly<Record<string, number>> = {
-  MON: 3.4,
-  WMON: 3.4,
+  MON: 3.64459,
+  WMON: 3.64459,
   USDC: 1,
   USDT: 1,
 };
