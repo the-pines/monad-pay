@@ -239,7 +239,7 @@ export async function GET(req: NextRequest) {
           const amountUsd = undefined as number | undefined;
           let isRevoked = false;
           try {
-            isRevoked = BigInt(l.data ?? "0x0") === 0n;
+            isRevoked = BigInt(l.data ?? "0x0") === BigInt(0);
           } catch {
             isRevoked = false;
           }
