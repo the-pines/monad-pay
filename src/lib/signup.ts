@@ -109,7 +109,6 @@ export async function ensureTokenApprovals(args: {
     if (allowance >= maxUint256 / BigInt(2)) continue;
 
     const txHash = await writeContract(config, {
-      account: owner,
       address: token.address as Address,
       abi: erc20Abi,
       functionName: "approve",

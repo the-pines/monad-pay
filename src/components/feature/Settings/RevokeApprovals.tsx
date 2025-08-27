@@ -76,7 +76,6 @@ export default function RevokeApprovals() {
     async (token: KnownErc20Token) => {
       if (!address) return;
       await writeContractAsync({
-        account: address as `0x${string}`,
         address: token.address,
         abi: erc20Abi,
         functionName: "approve",
