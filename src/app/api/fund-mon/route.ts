@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Address, Hex, isAddress, erc20Abi } from "viem";
 import { createPublicClient, createWalletClient, http } from "viem";
+import { monadTestnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -41,8 +42,12 @@ export async function POST(req: NextRequest) {
       ? (SERVER_WALLET_PK as Hex)
       : (("0x" + SERVER_WALLET_PK) as Hex);
     const account = privateKeyToAccount(pk);
-    const publicClient = createPublicClient({ transport: http(MONAD_RPC_URL) });
+    const publicClient = createPublicClient({
+      chain: monadTestnet,
+      transport: http(MONAD_RPC_URL),
+    });
     const wallet = createWalletClient({
+      chain: monadTestnet,
       account,
       transport: http(MONAD_RPC_URL),
     });
@@ -78,7 +83,6 @@ export async function POST(req: NextRequest) {
       monTxHash = await wallet.sendTransaction({
         to: addr as Address,
         value,
-        chain: undefined,
       });
       await publicClient.waitForTransactionReceipt({ hash: monTxHash });
     } catch (sendErr) {
@@ -110,7 +114,6 @@ export async function POST(req: NextRequest) {
           serverUsdcBalance >= halfUsdc ? halfUsdc : serverUsdcBalance;
         if (amountToSend > BigInt(0)) {
           usdcTxHash = await wallet.writeContract({
-            chain: undefined,
             address: usdc.address as Address,
             abi: erc20Abi,
             functionName: "transfer",

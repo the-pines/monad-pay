@@ -12,8 +12,11 @@ export const wagmiAdapter = new WagmiAdapter({
   ssr: true,
   projectId: process.env.NEXT_PUBLIC_REOW_PROJECT_ID!,
   networks,
+  // Force WalletConnect RPC aggregator on the client to Reown
   transports: {
-    [monadTestnet.id]: http("https://testnet-rpc.monad.xyz"),
+    [monadTestnet.id]: http(
+      `https://rpc.walletconnect.com/v1?chainId=eip155:${monadTestnet.id}&projectId=${process.env.NEXT_PUBLIC_REOW_PROJECT_ID}`
+    ),
   },
 });
 
