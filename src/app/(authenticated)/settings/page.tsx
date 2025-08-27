@@ -4,7 +4,7 @@ import LogoutButton from "@/components/feature/Settings/LogoutButton";
 import RevokeApprovals from "@/components/feature/Settings/RevokeApprovals";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/navigation";
-import { useAppKit, useAppKitAccount } from "@reown/appkit/react";
+import { useAppKit } from "@reown/appkit/react";
 
 export default function SettingsPage() {
   const router = useRouter();
