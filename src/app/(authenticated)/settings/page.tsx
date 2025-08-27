@@ -9,7 +9,6 @@ import { useAppKit, useAppKitAccount } from "@reown/appkit/react";
 export default function SettingsPage() {
   const router = useRouter();
   const { open } = useAppKit();
-  const { address, isConnected } = useAppKitAccount();
 
   return (
     <div className='p-4'>
