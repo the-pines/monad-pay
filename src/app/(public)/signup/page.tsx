@@ -275,10 +275,10 @@ export default function SignUpPage() {
                     value={name}
                     required
                     maxLength={24}
-                    pattern='[A-Za-z]+'
-                    title='Letters only (A–Z). No numbers or special characters.'
+                    pattern='[A-Za-z ]+'
+                    title='Letters and spaces only (A–Z). No numbers or special characters.'
                     onChange={(e) =>
-                      setName(e.target.value.replace(/[^A-Za-z]/g, ""))
+                      setName(e.target.value.replace(/[^A-Za-z ]/g, ""))
                     }
                     className='w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30'
                     placeholder='MonadRox'
@@ -357,7 +357,7 @@ export default function SignUpPage() {
                     </label>
                   ) : null}
                   <p className='text-xs text-white/60 text-center'>
-                    Other ERC20s coming soon.
+                    Other tokens coming soon!
                   </p>
                 </div>
 
