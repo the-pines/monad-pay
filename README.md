@@ -4,6 +4,14 @@
 
 With Monad Pay, users can pay with _anything_, _anywhere._ We issue a virtual card for everyone so they can spend their Monad balance. They can use it anywhere that accepts VISA!
 
+[Pitch deck](https://drive.google.com/file/d/1bOXyMlwSR-7c0ttm9ksKLO1NhN_pMUxq/view?usp=drive_link)
+
+[English demo (with a new user!)](https://drive.google.com/file/d/16-v16d6SbSH6dEt-vqi-WyIjjw7Y4_UO/view?usp=drive_link)
+
+[Spanish demo](https://drive.google.com/file/d/1PNm9qwx-6WG_WI5NKSSBkhsISGVFigPb/view?usp=drive_link)
+
+[Go to market](https://drive.google.com/file/d/1lar2-tWtQIadZW8ZrCmjMhpGbPbRT7Ds/view?usp=drive_link)
+
 ## Test it out yourself
 
 Monad Pay is live on [usemonadpay.com](https://www.usemonadpay.com/) so you can login and explore the features yourself. Currently we are in a sandbox environment and have not enabled real payments, as Monad is still in testnet, but you can spend your tokens using your card in our [sandbox Stripe shop](https://shop.usemonadpay.com/).
