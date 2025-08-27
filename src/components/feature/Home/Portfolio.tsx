@@ -6,12 +6,15 @@ import { Card } from "@/components/ui";
 import { useUser } from "@/contexts/UserContext";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { parseUnits } from "viem";
+import { useAppKit } from "@reown/appkit/react";
+import { ChevronRightIcon } from "@heroicons/react/24/outline";
 
 export default function Portfolio() {
   const { portfolio, isFetchingPortfolio, refreshPortfolio } = useUser();
   const { address, chain } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
+  const { open } = useAppKit();
 
   const [showSwap, setShowSwap] = React.useState(false);
   const [swapAnimIn, setSwapAnimIn] = React.useState(false);
@@ -84,7 +87,7 @@ export default function Portfolio() {
 
   return (
     <div className='mt-6'>
-      <h2 className='mb-4 text-sm leading-6 font-medium tracking-wide text-[--foreground]/70'>
+      <h2 className='mb-4 text-base leading-6 font-semibold tracking-wide text-[--foreground]/80'>
         Portfolio
       </h2>
       <div className='space-y-2'>
@@ -173,6 +176,14 @@ export default function Portfolio() {
           </div>
         </div>
       ) : null}
+      <button
+        type='button'
+        onClick={() => open()}
+        className='mt-3 inline-flex items-center gap-1.5 text-[--foreground]/80 hover:text-[--foreground]'
+      >
+        <span className='text-sm font-medium'>Open wallet</span>
+        <ChevronRightIcon className='w-4 h-4' aria-hidden='true' />
+      </button>
     </div>
   );
 }

@@ -237,13 +237,25 @@ export async function GET(req: NextRequest) {
           const token = knownErc20ByAddress.get(l.address.toLowerCase());
           const symbol = token?.symbol ?? "TOKEN";
           const amountUsd = undefined as number | undefined;
+          let isRevoked = false;
+          try {
+            isRevoked = BigInt(l.data ?? "0x0") === 0n;
+          } catch {
+            isRevoked = false;
+          }
           const blockTsSec = blockNumberToTimestamp.get(Number(l.block_number));
           const datetime = blockTsSec
             ? new Date(blockTsSec * 1000).toISOString()
             : new Date().toISOString();
           return {
             id: `${l.block_number}-${l.log_index}-approval`,
-            title: isOut ? `Approved ${symbol}` : `Received approval ${symbol}`,
+            title: isRevoked
+              ? isOut
+                ? `Revoked approval ${symbol}`
+                : `Approval revoked ${symbol}`
+              : isOut
+              ? `Approved ${symbol}`
+              : `Received approval ${symbol}`,
             note: isOut ? spenderAddr : ownerAddr,
             tokenSymbol: symbol,
             tokenAmount: 0,

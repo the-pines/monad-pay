@@ -4,6 +4,7 @@ import {
   ArrowDownLeftIcon,
   ArrowUpRightIcon,
   HandThumbUpIcon,
+  MinusCircleIcon,
 } from "@heroicons/react/24/outline";
 
 export type TransactionProps = {
@@ -28,8 +29,11 @@ export default function Transaction({
   onClick,
 }: TransactionProps) {
   const isApproval = /\bapprov/i.test(title);
+  const isRevoked = /\brevok/i.test(title);
   const Icon = isApproval
-    ? HandThumbUpIcon
+    ? isRevoked
+      ? MinusCircleIcon
+      : HandThumbUpIcon
     : direction === "in"
     ? ArrowDownLeftIcon
     : ArrowUpRightIcon;
@@ -78,7 +82,7 @@ export default function Transaction({
           </div>
           {isApproval ? (
             <Badge size='sm' intent='info'>
-              Approval
+              {isRevoked ? "Revoked" : "Approval"}
             </Badge>
           ) : (
             <Badge size='sm' intent={direction === "in" ? "success" : "danger"}>

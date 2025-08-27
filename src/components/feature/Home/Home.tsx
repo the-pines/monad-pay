@@ -39,7 +39,9 @@ export default function Home() {
       </div>
 
       <Portfolio />
+      <div className='my-5 h-px bg-white/10' />
       <RecentTransactions />
+      <div className='my-5 h-px bg-white/10' />
       <RedeemPointsNearby />
     </section>
   );
